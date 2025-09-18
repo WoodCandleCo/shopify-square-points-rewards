@@ -1,36 +1,14 @@
-import React, { useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import LoyaltyDashboard from '@/components/LoyaltyDashboard';
 import { Button } from '@/components/ui/button';
-import { LogOut, Settings, Square, Gift, Users } from 'lucide-react';
+import { Square, Gift, Users, Settings } from 'lucide-react';
 
 const Index = () => {
-  const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
-    }
-  }, [user, loading, navigate]);
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/auth');
-  };
-
-  if (loading) {
-    return (
+  return (
+    <div className="min-h-screen bg-background">
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-center space-y-6">
           <div className="space-y-4">
             <h1 className="text-4xl font-bold text-foreground">Square Loyalty Program</h1>
@@ -38,10 +16,8 @@ const Index = () => {
           </div>
           
           <div className="flex gap-4 justify-center">
-            <Button onClick={() => navigate('/auth')}>
-              Sign In
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/admin')}>
+            <Button onClick={() => navigate('/admin')}>
+              <Settings className="w-4 h-4 mr-2" />
               Admin Dashboard
             </Button>
           </div>
@@ -63,29 +39,18 @@ const Index = () => {
               <p className="text-sm text-muted-foreground">Find accounts by phone number or login</p>
             </div>
           </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
-        <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
-          <h1 className="text-xl font-semibold text-foreground">Square Loyalty</h1>
-          <div className="flex items-center gap-2">
-            <Button variant="ghost" onClick={() => navigate('/admin')} size="sm">
-              <Settings className="w-4 h-4 mr-2" />
-              Admin
-            </Button>
-            <Button variant="outline" onClick={handleSignOut} size="sm">
-              <LogOut className="w-4 h-4 mr-2" />
-              Sign Out
-            </Button>
+          
+          <div className="mt-12 p-6 bg-card rounded-lg border max-w-2xl mx-auto">
+            <h3 className="text-lg font-semibold mb-2">How it works:</h3>
+            <ol className="text-left text-sm text-muted-foreground space-y-1">
+              <li>1. Configure your Square API credentials in the admin dashboard</li>
+              <li>2. Deploy the checkout extension to your Shopify store</li>
+              <li>3. Customers can access loyalty points during checkout</li>
+              <li>4. Points are redeemed automatically with discounts applied</li>
+            </ol>
           </div>
         </div>
-      </header>
-      <LoyaltyDashboard />
+      </div>
     </div>
   );
 };
