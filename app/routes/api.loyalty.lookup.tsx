@@ -1,0 +1,100 @@
+import { json } from "@remix-run/node";
+import type { ActionFunction } from "@remix-run/node";
+import { supabase } from "~/integrations/supabase/client";
+
+export const action: ActionFunction = async ({ request }) => {
+  if (request.method !== "POST") {
+    return json({ error: "Method not allowed" }, { status: 405 });
+  }
+
+  try {
+    const { phone, customer_id, email } = await request.json();
+
+    if (!phone) {
+      return json({ error: "Phone number required" }, { status: 400 });
+    }
+
+    // Call Square API to find loyalty account by phone
+    const squareResponse = await fetch(`https://connect.squareup.com/v2/loyalty/accounts/search`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Square-Version': '2024-10-17'
+      },
+      body: JSON.stringify({
+        query: {
+          filter: {
+            phone_number_filter: {
+              phone_number: phone
+            }
+          }
+        }
+      })
+    });
+
+    if (!squareResponse.ok) {
+      return json({ error: "Failed to find loyalty account" }, { status: 404 });
+    }
+
+    const squareData = await squareResponse.json();
+    
+    if (!squareData.loyalty_accounts || squareData.loyalty_accounts.length === 0) {
+      return json({ error: "No loyalty account found for this phone number" }, { status: 404 });
+    }
+
+    const squareLoyaltyAccount = squareData.loyalty_accounts[0];
+
+    // Create or update profile in Supabase
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .upsert({
+        shopify_customer_id: customer_id,
+        email: email,
+        phone: phone,
+        square_customer_id: squareLoyaltyAccount.customer_id
+      })
+      .select()
+      .single();
+
+    if (profileError) {
+      console.error('Profile error:', profileError);
+      return json({ error: "Failed to create profile" }, { status: 500 });
+    }
+
+    // Create or update loyalty account
+    const { data: loyaltyAccount, error: loyaltyError } = await supabase
+      .from('loyalty_accounts')
+      .upsert({
+        user_id: profile.id,
+        program_id: squareLoyaltyAccount.program_id,
+        square_loyalty_account_id: squareLoyaltyAccount.id,
+        balance: squareLoyaltyAccount.balance,
+        points_earned_lifetime: squareLoyaltyAccount.lifetime_points || 0
+      })
+      .select()
+      .single();
+
+    if (loyaltyError) {
+      console.error('Loyalty account error:', loyaltyError);
+      return json({ error: "Failed to create loyalty account" }, { status: 500 });
+    }
+
+    // Get available rewards
+    const { data: rewards } = await supabase
+      .from('loyalty_rewards')
+      .select('*')
+      .eq('is_active', true)
+      .lte('points_required', loyaltyAccount.balance)
+      .order('points_required', { ascending: true });
+
+    return json({
+      loyalty_account: loyaltyAccount,
+      available_rewards: rewards || []
+    });
+
+  } catch (error) {
+    console.error('Error looking up loyalty account:', error);
+    return json({ error: "Internal server error" }, { status: 500 });
+  }
+};
