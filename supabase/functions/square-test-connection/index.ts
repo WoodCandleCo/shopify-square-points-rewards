@@ -13,10 +13,10 @@ serve(async (req) => {
 
   try {
     const SQUARE_ACCESS_TOKEN = Deno.env.get('SQUARE_ACCESS_TOKEN')
-    const SQUARE_APPLICATION_ID = Deno.env.get('SQUARE_APPLICATION_ID')
+    const SQUARE_APPLICATION_ID = Deno.env.get('SQUARE_APPLICATION_ID') // optional
 
-    if (!SQUARE_ACCESS_TOKEN || !SQUARE_APPLICATION_ID) {
-      throw new Error('Square credentials not configured')
+    if (!SQUARE_ACCESS_TOKEN) {
+      throw new Error('Square access token not configured')
     }
 
     // Initialize Supabase client to get environment setting
@@ -54,7 +54,10 @@ serve(async (req) => {
     if (!response.ok) {
       const errorText = await response.text()
       console.error(`Square API error: ${response.status} - ${errorText}`)
-      throw new Error(`Square API error: ${response.status}`)
+      return new Response(
+        JSON.stringify({ success: false, environment, status: response.status, error: errorText }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
     }
 
     const data = await response.json()
