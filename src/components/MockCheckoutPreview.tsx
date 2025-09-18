@@ -105,37 +105,58 @@ const MockCheckoutPreview = () => {
     try {
       // Calculate discount amount based on reward type and scope
       let discountAmount = 0;
-      let applicableItemsTotal = 0;
-      
-      // Determine which items the reward applies to based on scope
-      if (reward.scope === 'ITEM_VARIATION' && reward.applicable_product_ids) {
-        // Apply to specific products only
-        applicableItemsTotal = cartItems
-          .filter(item => reward.applicable_product_ids.includes(item.id.toString()))
-          .reduce((total, item) => total + (item.price * item.quantity), 0);
-      } else if (reward.scope === 'CATEGORY' && reward.applicable_category_ids) {
-        // Apply to specific categories only (for demo, assume all items are in category)
-        applicableItemsTotal = calculateSubtotal();
-      } else {
-        // ORDER scope - apply to entire cart
-        applicableItemsTotal = calculateSubtotal();
-      }
+      let discountName = reward.name;
       
       if (reward.discount_type === 'FIXED_AMOUNT') {
         discountAmount = reward.discount_amount / 100; // Convert cents to dollars
       } else if (reward.discount_type === 'PERCENTAGE') {
-        discountAmount = (applicableItemsTotal * (reward.discount_amount || 0)) / 100;
-        if (reward.max_discount_amount) {
-          discountAmount = Math.min(discountAmount, reward.max_discount_amount / 100);
+        if (reward.discount_amount === 100) {
+          // This is a free item reward, not a percentage discount
+          if (reward.scope === 'ITEM_VARIATION' && reward.applicable_product_ids) {
+            // Find the specific item and give one free
+            const applicableItem = cartItems.find(item => 
+              reward.applicable_product_ids.includes(item.id.toString())
+            );
+            if (applicableItem) {
+              discountAmount = applicableItem.price;
+              discountName = `Free ${applicableItem.name}`;
+            }
+          } else {
+            // For non-specific items, give the lowest priced item free
+            const lowestPricedItem = cartItems.reduce((min, item) => 
+              item.price < min.price ? item : min
+            );
+            discountAmount = lowestPricedItem.price;
+            discountName = `Free ${lowestPricedItem.name}`;
+          }
+        } else {
+          // Regular percentage discount
+          let applicableItemsTotal = 0;
+          
+          if (reward.scope === 'ITEM_VARIATION' && reward.applicable_product_ids) {
+            applicableItemsTotal = cartItems
+              .filter(item => reward.applicable_product_ids.includes(item.id.toString()))
+              .reduce((total, item) => total + (item.price * item.quantity), 0);
+          } else if (reward.scope === 'CATEGORY' && reward.applicable_category_ids) {
+            applicableItemsTotal = calculateSubtotal();
+          } else {
+            applicableItemsTotal = calculateSubtotal();
+          }
+          
+          discountAmount = (applicableItemsTotal * (reward.discount_amount || 0)) / 100;
+          if (reward.max_discount_amount) {
+            discountAmount = Math.min(discountAmount, reward.max_discount_amount / 100);
+          }
         }
       }
 
       // Add the discount to applied discounts
       const newDiscount = {
         id: reward.id,
-        name: reward.name,
+        name: discountName,
         amount: discountAmount,
-        type: reward.discount_type
+        type: reward.discount_type,
+        is_free_item: reward.discount_type === 'PERCENTAGE' && reward.discount_amount === 100
       };
       
       setAppliedDiscounts(prev => [...prev, newDiscount]);
