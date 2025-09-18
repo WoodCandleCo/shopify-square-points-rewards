@@ -15,8 +15,6 @@ serve(async (req) => {
 
   try {
     console.log('Auto-tag function called!');
-    console.log('Request method:', req.method);
-    console.log('Request URL:', req.url);
     
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -37,8 +35,6 @@ serve(async (req) => {
 
     console.log('Using Shopify store URL:', shopifyStoreUrl);
 
-    console.log('Starting automatic product tagging...');
-
     // Get product mappings from database
     const { data: mappings, error: mappingsError } = await supabaseClient
       .from('product_mappings')
@@ -49,6 +45,33 @@ serve(async (req) => {
       throw new Error(`Failed to get product mappings: ${mappingsError.message}`);
     }
 
+    console.log('Found mappings:', mappings.length);
+
+    // First, get ALL products from Shopify to analyze
+    console.log('Fetching all products from Shopify...');
+    const allProductsResponse = await fetch(
+      `https://${shopifyStoreUrl}/admin/api/2024-10/products.json?limit=250`,
+      {
+        headers: {
+          'X-Shopify-Access-Token': shopifyAccessToken,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    if (!allProductsResponse.ok) {
+      const errorText = await allProductsResponse.text();
+      throw new Error(`Failed to fetch products: ${errorText}`);
+    }
+
+    const allProductsData = await allProductsResponse.json();
+    const allProducts = allProductsData.products || [];
+    
+    console.log(`Found ${allProducts.length} total products in store`);
+    if (allProducts.length > 0) {
+      console.log('Sample product names:', allProducts.slice(0, 5).map(p => p.title));
+    }
+
     let taggedCount = 0;
     const results = [];
 
@@ -56,94 +79,38 @@ serve(async (req) => {
       console.log(`Processing mapping for: ${mapping.product_name}`);
       
       try {
-        // Define more flexible search terms for each category
-        let searchTerms = [];
+        // Define search terms for each category
+        let keywords = [];
         const productName = mapping.product_name.toLowerCase();
         
         if (productName.includes('match')) {
-          searchTerms = ['match', 'matches', 'lighter'];
+          keywords = ['match'];
         } else if (productName.includes('wick trimmer')) {
-          searchTerms = ['wick trimmer', 'trimmer', 'wick cutter'];
-        } else if (productName.includes('7oz candle') || productName.includes('candle')) {
-          searchTerms = ['candle', '7oz', '7 oz', 'soy candle', 'jar candle'];
+          keywords = ['wick', 'trimmer'];
+        } else if (productName.includes('candle')) {
+          keywords = ['candle'];
         } else if (productName.includes('wax melt')) {
-          searchTerms = ['wax melt', 'melt', 'wax', 'melts', 'tart'];
+          keywords = ['wax', 'melt'];
         } else {
-          // Fallback to original name
-          searchTerms = [productName, productName.replace(/\s+/g, '')];
+          keywords = [productName];
         }
 
-        console.log(`Using search terms for ${mapping.product_name}:`, searchTerms);
+        console.log(`Looking for products containing: ${keywords.join(' OR ')}`);
 
-        let foundProducts = [];
-
-        // Search using multiple terms and methods
-        for (const searchTerm of searchTerms) {
-          // Search by title
-          let response = await fetch(
-            `https://${shopifyStoreUrl}/admin/api/2024-10/products.json?title=${encodeURIComponent(searchTerm)}&limit=50`,
-            {
-              headers: {
-                'X-Shopify-Access-Token': shopifyAccessToken,
-                'Content-Type': 'application/json'
-              }
-            }
-          );
-
-          if (response.ok) {
-            const data = await response.json();
-            foundProducts = foundProducts.concat(data.products || []);
-          }
-
-          // Also search by vendor/tag if we have specific terms
-          response = await fetch(
-            `https://${shopifyStoreUrl}/admin/api/2024-10/products.json?vendor=${encodeURIComponent(searchTerm)}&limit=50`,
-            {
-              headers: {
-                'X-Shopify-Access-Token': shopifyAccessToken,
-                'Content-Type': 'application/json'
-              }
-            }
-          );
-
-          if (response.ok) {
-            const data = await response.json();
-            foundProducts = foundProducts.concat(data.products || []);
-          }
-        }
-
-        // Remove duplicates
-        foundProducts = foundProducts.filter((product, index, self) => 
-          index === self.findIndex(p => p.id === product.id)
-        );
-
-        console.log(`Found ${foundProducts.length} products for ${mapping.product_name}`);
-
-        // Better product matching logic based on category
-        const matchingProducts = foundProducts.filter(product => {
+        // Find matching products
+        const matchingProducts = allProducts.filter(product => {
           const title = product.title.toLowerCase();
           const description = (product.body_html || '').toLowerCase();
           const tags = (product.tags || '').toLowerCase();
           const vendor = (product.vendor || '').toLowerCase();
           
-          // Combine all searchable text
           const allText = `${title} ${description} ${tags} ${vendor}`;
           
-          if (productName.includes('match')) {
-            return allText.includes('match') || allText.includes('lighter');
-          } else if (productName.includes('wick trimmer')) {
-            return allText.includes('wick') && allText.includes('trimmer');
-          } else if (productName.includes('candle')) {
-            return allText.includes('candle');
-          } else if (productName.includes('wax melt')) {
-            return allText.includes('wax') && (allText.includes('melt') || allText.includes('tart'));
-          }
-          
-          // Fallback to original logic
-          return searchTerms.some(term => allText.includes(term.toLowerCase()));
+          // For single keywords, just check if any keyword exists
+          return keywords.some(keyword => allText.includes(keyword));
         });
 
-        console.log(`${matchingProducts.length} products match criteria for ${mapping.product_name}`);
+        console.log(`Found ${matchingProducts.length} products for ${mapping.product_name}`);
 
         // Tag matching products
         for (const product of matchingProducts) {
@@ -210,7 +177,7 @@ serve(async (req) => {
           results.push({
             mapping_name: mapping.product_name,
             success: false,
-            error: 'No matching products found'
+            error: `No products found containing: ${keywords.join(', ')}`
           });
         }
 
@@ -230,6 +197,7 @@ serve(async (req) => {
         message: `Tagged ${taggedCount} products with loyalty tags`,
         tagged_count: taggedCount,
         total_mappings: mappings.length,
+        total_products_in_store: allProducts.length,
         results: results
       }),
       {
