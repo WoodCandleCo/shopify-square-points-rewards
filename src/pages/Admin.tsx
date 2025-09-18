@@ -1,18 +1,74 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Settings, Eye } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { Settings, Eye, Gift } from "lucide-react";
 import MockCheckoutPreview from "@/components/MockCheckoutPreview";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const AdminDashboard = () => {
   const { settings, loading, updateSetting, testSquareConnection } = useAppSettings();
   const { toast } = useToast();
+  const [rewards, setRewards] = useState([]);
+  const [loadingRewards, setLoadingRewards] = useState(false);
+
+  useEffect(() => {
+    loadRewards();
+  }, []);
+
+  const loadRewards = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('loyalty_rewards')
+        .select('*')
+        .order('points_required', { ascending: true });
+
+      if (error) throw error;
+      setRewards(data || []);
+    } catch (error) {
+      console.error('Error loading rewards:', error);
+      toast({
+        title: "Error loading rewards",
+        description: "Could not load loyalty rewards.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const syncRewardsFromSquare = async () => {
+    setLoadingRewards(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-square-rewards');
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: "Rewards synced",
+          description: `Successfully synced ${data.count} rewards from Square.`
+        });
+        loadRewards(); // Reload the rewards table
+      } else {
+        throw new Error(data?.error || 'Sync failed');
+      }
+    } catch (error) {
+      console.error('Error syncing rewards:', error);
+      toast({
+        title: "Sync failed",
+        description: "Could not sync rewards from Square. Check your API connection.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingRewards(false);
+    }
+  };
 
   const handleTestConnection = async () => {
     await testSquareConnection();
@@ -20,6 +76,22 @@ const AdminDashboard = () => {
 
   const handleSettingChange = (key: string, value: any) => {
     updateSetting(key as any, value);
+  };
+
+  const formatDiscount = (reward: any) => {
+    if (reward.discount_type === 'FIXED_AMOUNT') {
+      return `$${(reward.discount_amount / 100).toFixed(2)}`;
+    } else if (reward.discount_type === 'FIXED_PERCENTAGE') {
+      return `${reward.discount_amount}%`;
+    }
+    return 'N/A';
+  };
+
+  const formatMaxDiscount = (reward: any) => {
+    if (reward.discount_type === 'FIXED_PERCENTAGE' && reward.max_discount_amount) {
+      return `$${(reward.max_discount_amount / 100).toFixed(2)} max`;
+    }
+    return '-';
   };
 
   return (
@@ -31,10 +103,14 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="settings" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
               Settings
+            </TabsTrigger>
+            <TabsTrigger value="rewards" className="flex items-center gap-2">
+              <Gift className="w-4 h-4" />
+              Rewards
             </TabsTrigger>
             <TabsTrigger value="preview" className="flex items-center gap-2">
               <Eye className="w-4 h-4" />
@@ -128,6 +204,65 @@ const AdminDashboard = () => {
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="rewards" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Loyalty Rewards</CardTitle>
+                <CardDescription>
+                  Sync and manage rewards from your Square loyalty program
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-between items-center mb-6">
+                  <Button 
+                    onClick={syncRewardsFromSquare} 
+                    disabled={loadingRewards}
+                  >
+                    {loadingRewards ? 'Syncing...' : 'Sync from Square'}
+                  </Button>
+                  <p className="text-sm text-muted-foreground">
+                    {rewards.length} rewards loaded
+                  </p>
+                </div>
+                
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Reward Name</TableHead>
+                      <TableHead>Points Required</TableHead>
+                      <TableHead>Discount</TableHead>
+                      <TableHead>Max Discount</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {rewards.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                          No rewards found. Click "Sync from Square" to load rewards.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      rewards.map((reward: any) => (
+                        <TableRow key={reward.id}>
+                          <TableCell className="font-medium">{reward.name}</TableCell>
+                          <TableCell>{reward.points_required}</TableCell>
+                          <TableCell>{formatDiscount(reward)}</TableCell>
+                          <TableCell>{formatMaxDiscount(reward)}</TableCell>
+                          <TableCell>
+                            <Badge variant={reward.is_active ? "default" : "secondary"}>
+                              {reward.is_active ? "Active" : "Inactive"}
+                            </Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           </TabsContent>
