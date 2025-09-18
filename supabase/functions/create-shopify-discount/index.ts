@@ -42,6 +42,20 @@ serve(async (req) => {
     
     console.log('Discount scope:', scope, 'Catalog objects:', catalogObjectIds);
 
+    // Get product mappings for catalog objects
+    let productMapping = null;
+    if (catalogObjectIds.length > 0) {
+      const { data: mappings } = await supabaseClient
+        .from('product_mappings')
+        .select('*')
+        .in('square_catalog_object_id', catalogObjectIds)
+        .eq('is_active', true)
+        .limit(1);
+      
+      productMapping = mappings?.[0];
+      console.log('Found product mapping:', productMapping);
+    }
+
     let discountPayload: any;
 
     // Handle different discount types based on Square's scope
@@ -54,10 +68,10 @@ serve(async (req) => {
       let prerequisiteToEntitlementQuantityRatio = null;
       
       if (scope === 'ITEM_VARIATION') {
-        // For free specific items, create a "Buy X Get Y Free" type discount
-        // This requires the customer to have the item in cart to get it free
-        title += ` (Free Item - Must add eligible product to cart)`;
+        // For free specific items, create a more targeted discount
+        title += ` (Free ${productMapping?.product_name || 'Item'})`;
         
+        // Create a discount that's more specific to the product type
         discountPayload = {
           price_rule: {
             title: title,
@@ -65,20 +79,24 @@ serve(async (req) => {
             value: '-100.0', // 100% off
             customer_selection: 'all',
             target_type: 'line_item',
-            target_selection: 'all', // This will need to be manually configured in Shopify
+            target_selection: 'all',
             allocation_method: 'each',
             usage_limit: 1,
             once_per_customer: true,
             starts_at: new Date().toISOString(),
             ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            // Add a minimum quantity requirement to prevent abuse
             prerequisite_subtotal_range: {
               greater_than_or_equal_to: '0.01'
             },
-            // Limit to 1 item to prevent getting entire cart free
-            allocation_limit: '25.00' // Max $25 discount to prevent abuse
+            // Limit discount amount to prevent abuse
+            allocation_limit: '25.00'
           }
         };
+
+        // Add notes about which products this applies to
+        if (productMapping?.shopify_tag) {
+          discountPayload.price_rule.title += ` - Tag products with: ${productMapping.shopify_tag}`;
+        }
       } else if (scope === 'CATEGORY') {
         title += ` (Category Discount - Apply to specific category)`;
         

@@ -103,7 +103,7 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="settings" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
               Settings
@@ -111,6 +111,10 @@ const AdminDashboard = () => {
             <TabsTrigger value="rewards" className="flex items-center gap-2">
               <Gift className="w-4 h-4" />
               Rewards
+            </TabsTrigger>
+            <TabsTrigger value="mappings" className="flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Product Mapping
             </TabsTrigger>
             <TabsTrigger value="preview" className="flex items-center gap-2">
               <Eye className="w-4 h-4" />
@@ -263,6 +267,44 @@ const AdminDashboard = () => {
                     )}
                   </TableBody>
                 </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="mappings" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Product Mappings</CardTitle>
+                <CardDescription>
+                  Map Square catalog items to Shopify products for precise free product rewards
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="p-4 bg-muted rounded-lg">
+                    <h4 className="font-medium mb-2">Setup Instructions:</h4>
+                    <ol className="text-sm text-muted-foreground space-y-1">
+                      <li>1. Tag your Shopify products with the corresponding loyalty tags:</li>
+                      <li className="ml-4">• Tag matches with: <code>loyalty-matches</code></li>
+                      <li className="ml-4">• Tag wick trimmers with: <code>loyalty-wick-trimmer</code></li>
+                      <li className="ml-4">• Tag 7oz candles with: <code>loyalty-7oz-candle</code></li>
+                      <li className="ml-4">• Tag wax melts with: <code>loyalty-wax-melt</code></li>
+                      <li>2. Free product discounts will apply only to products with these tags</li>
+                      <li>3. Discounts are limited to $25 maximum to prevent abuse</li>
+                    </ol>
+                  </div>
+                  
+                  <div className="p-4 border border-orange-200 bg-orange-50 rounded-lg">
+                    <div className="flex items-center gap-2 text-orange-800">
+                      <div className="w-4 h-4 rounded-full bg-orange-500"></div>
+                      <span className="font-medium">Important</span>
+                    </div>
+                    <p className="text-sm text-orange-700 mt-2">
+                      You must manually configure Shopify discount codes to target specific products using tags or collections. 
+                      The system creates the discount codes, but Shopify admin configuration is required for product-specific targeting.
+                    </p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

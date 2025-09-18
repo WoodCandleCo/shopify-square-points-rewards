@@ -169,6 +169,48 @@ export type Database = {
           },
         ]
       }
+      product_mappings: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          mapping_type: string
+          product_name: string
+          shopify_collection_id: string | null
+          shopify_product_handle: string | null
+          shopify_product_id: string | null
+          shopify_tag: string | null
+          square_catalog_object_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          mapping_type: string
+          product_name: string
+          shopify_collection_id?: string | null
+          shopify_product_handle?: string | null
+          shopify_product_id?: string | null
+          shopify_tag?: string | null
+          square_catalog_object_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          mapping_type?: string
+          product_name?: string
+          shopify_collection_id?: string | null
+          shopify_product_handle?: string | null
+          shopify_product_id?: string | null
+          shopify_tag?: string | null
+          square_catalog_object_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
