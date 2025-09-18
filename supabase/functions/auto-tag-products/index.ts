@@ -147,22 +147,18 @@ serve(async (req) => {
         let matchingProducts = [];
         
         if (productName.includes('match')) {
-          // Look for products in matches/accessories collections or with "match" in title
+          // Only tag products that actually have "match" in title (excluding "matching")
           matchingProducts = allProducts.filter(product => {
             const title = product.title.toLowerCase();
-            const collections = productCollectionMap.get(product.id) || [];
-            return title.includes('match') && !title.includes('matching') ||
-                   collections.some(col => col.includes('match') || col.includes('accessor'));
+            return title.includes('match') && !title.includes('matching');
           });
         } else if (productName.includes('wick trimmer')) {
-          // Look for wick trimmers in accessories or tools collections
+          // Only tag products that are actually wick trimmers
           matchingProducts = allProducts.filter(product => {
             const title = product.title.toLowerCase();
             const productType = (product.product_type || '').toLowerCase();
-            const collections = productCollectionMap.get(product.id) || [];
             return (title.includes('wick') && title.includes('trimmer')) || 
-                   productType.includes('wick trimmer') ||
-                   collections.some(col => col.includes('accessor') || col.includes('tool'));
+                   productType.includes('wick trimmer');
           });
         } else if (productName.includes('7oz candle')) {
           // Look for products in candle collections, excluding melts
