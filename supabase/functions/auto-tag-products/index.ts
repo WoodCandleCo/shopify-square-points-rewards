@@ -20,12 +20,32 @@ serve(async (req) => {
     );
 
     // Get Shopify credentials
-    const shopifyStoreUrl = Deno.env.get('SHOPIFY_STORE_URL');
+    let shopifyStoreUrl = Deno.env.get('SHOPIFY_STORE_URL');
     const shopifyAccessToken = Deno.env.get('SHOPIFY_ACCESS_TOKEN');
 
     if (!shopifyStoreUrl || !shopifyAccessToken) {
       throw new Error('Missing Shopify credentials');
     }
+
+    // Clean up the store URL to ensure it's in the correct format
+    // Remove any protocol and path, extract just the domain
+    shopifyStoreUrl = shopifyStoreUrl.replace(/^https?:\/\//, '');
+    shopifyStoreUrl = shopifyStoreUrl.replace(/\/.*$/, '');
+    
+    // If it's an admin URL, extract the store name
+    if (shopifyStoreUrl.includes('admin.shopify.com')) {
+      const match = shopifyStoreUrl.match(/store\/([^\/]+)/);
+      if (match) {
+        shopifyStoreUrl = `${match[1]}.myshopify.com`;
+      }
+    }
+
+    // Ensure it ends with .myshopify.com
+    if (!shopifyStoreUrl.includes('.myshopify.com')) {
+      shopifyStoreUrl = `${shopifyStoreUrl}.myshopify.com`;
+    }
+
+    console.log('Using Shopify store URL:', shopifyStoreUrl);
 
     console.log('Starting automatic product tagging...');
 
