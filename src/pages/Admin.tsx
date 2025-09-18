@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Settings, Eye, Gift, Tag } from "lucide-react";
 import MockCheckoutPreview from "@/components/MockCheckoutPreview";
-import ProductTagManager from "@/components/ProductTagManager";
+import CombinedProductManager from "@/components/CombinedProductManager";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,8 +19,6 @@ const AdminDashboard = () => {
   const { toast } = useToast();
   const [rewards, setRewards] = useState([]);
   const [loadingRewards, setLoadingRewards] = useState(false);
-  const [loadingAutoTag, setLoadingAutoTag] = useState(false);
-  const [taggedProducts, setTaggedProducts] = useState([]);
 
   useEffect(() => {
     loadRewards();
@@ -73,63 +71,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const autoTagProducts = async () => {
-    console.log('Auto-tag button clicked!');
-    setLoadingAutoTag(true);
-    try {
-      console.log('Calling auto-tag-products function...');
-      const { data, error } = await supabase.functions.invoke('auto-tag-products');
-
-      console.log('Function response:', { data, error });
-
-      if (error) {
-        console.error('Function error:', error);
-        throw error;
-      }
-
-      if (data?.success) {
-        setTaggedProducts(data.results || []);
-        toast({
-          title: "Products tagged successfully",
-          description: `Tagged ${data.tagged_count} products with loyalty tags.`
-        });
-      } else {
-        throw new Error(data?.error || 'Auto-tagging failed');
-      }
-    } catch (error) {
-      console.error('Error auto-tagging products:', error);
-      toast({
-        title: "Auto-tagging failed",
-        description: "Could not automatically tag products. Check your Shopify API connection.",
-        variant: "destructive"
-      });
-    } finally {
-      setLoadingAutoTag(false);
-    }
-  };
-
-  const testShopifyConfig = async () => {
-    try {
-      console.log('Testing Shopify config...');
-      const { data, error } = await supabase.functions.invoke('test-shopify-config');
-      console.log('Test result:', { data, error });
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Shopify Configuration Test",
-        description: `Store URL: ${data.store_url}, Token: ${data.has_access_token ? 'Present' : 'Missing'}`
-      });
-    } catch (error) {
-      console.error('Test failed:', error);
-      toast({
-        title: "Configuration test failed",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
   const handleTestConnection = async () => {
     await testSquareConnection();
   };
@@ -163,7 +104,7 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="settings" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
               Settings
@@ -173,18 +114,15 @@ const AdminDashboard = () => {
               Rewards
             </TabsTrigger>
             <TabsTrigger value="mappings" className="flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              Product Mapping
-            </TabsTrigger>
-            <TabsTrigger value="tag-manager" className="flex items-center gap-2">
               <Tag className="w-4 h-4" />
-              Tag Manager
+              Product Tags
             </TabsTrigger>
             <TabsTrigger value="preview" className="flex items-center gap-2">
               <Eye className="w-4 h-4" />
               Preview
             </TabsTrigger>
           </TabsList>
+
           <TabsContent value="settings" className="mt-6">
             <Card>
               <CardHeader>
@@ -335,116 +273,7 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="mappings" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Product Mappings</CardTitle>
-                <CardDescription>
-                  Map Square catalog items to Shopify products for precise free product rewards
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="flex gap-4">
-                    <Button 
-                      onClick={testShopifyConfig} 
-                      variant="outline"
-                      className="flex-1"
-                    >
-                      Test Shopify Config
-                    </Button>
-                    <Button 
-                      onClick={autoTagProducts} 
-                      disabled={loadingAutoTag}
-                      className="flex-1"
-                    >
-                      {loadingAutoTag ? 'Tagging Products...' : 'Auto-Tag Products'}
-                    </Button>
-                  </div>
-                  
-                  {taggedProducts.length > 0 && (
-                    <div>
-                      <h4 className="font-medium mb-4">Tagged Products Results</h4>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Product Name</TableHead>
-                            <TableHead>Shopify Product ID</TableHead>
-                            <TableHead>Tag Applied</TableHead>
-                            <TableHead>Status</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {taggedProducts.map((result: any, index: number) => (
-                            <TableRow key={index}>
-                              <TableCell className="font-medium">
-                                {result.product_name || result.mapping_name || 'Unknown'}
-                              </TableCell>
-                              <TableCell>
-                                {result.product_id || '-'}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="secondary">
-                                  {result.tag_added || '-'}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant={result.success ? "default" : "destructive"}>
-                                  {result.success 
-                                    ? (result.already_tagged ? "Already Tagged" : "Tagged") 
-                                    : "Failed"
-                                  }
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                  
-                  <div className="p-4 bg-muted rounded-lg">
-                    <h4 className="font-medium mb-2">How Auto-Tagging Works:</h4>
-                    <ol className="text-sm text-muted-foreground space-y-1">
-                      <li>1. Searches your Shopify store for products matching loyalty item names</li>
-                      <li>2. Automatically adds the appropriate loyalty tags to matching products:</li>
-                      <li className="ml-4">• Matches → <code>loyalty-matches</code></li>
-                      <li className="ml-4">• Wick trimmers → <code>loyalty-wick-trimmer</code></li>
-                      <li className="ml-4">• 7oz candles → <code>loyalty-7oz-candle</code></li>
-                      <li className="ml-4">• Wax melts → <code>loyalty-wax-melt</code></li>
-                      <li>3. Free product discounts will then apply only to tagged products</li>
-                    </ol>
-                  </div>
-                  
-                  <div className="p-4 bg-muted rounded-lg">
-                    <h4 className="font-medium mb-2">Manual Setup (Alternative):</h4>
-                    <ol className="text-sm text-muted-foreground space-y-1">
-                      <li>1. Tag your Shopify products with the corresponding loyalty tags:</li>
-                      <li className="ml-4">• Tag matches with: <code>loyalty-matches</code></li>
-                      <li className="ml-4">• Tag wick trimmers with: <code>loyalty-wick-trimmer</code></li>
-                      <li className="ml-4">• Tag 7oz candles with: <code>loyalty-7oz-candle</code></li>
-                      <li className="ml-4">• Tag wax melts with: <code>loyalty-wax-melt</code></li>
-                      <li>2. Free product discounts will apply only to products with these tags</li>
-                      <li>3. Discounts are limited to $25 maximum to prevent abuse</li>
-                    </ol>
-                  </div>
-                  
-                  <div className="p-4 border border-orange-200 bg-orange-50 rounded-lg">
-                    <div className="flex items-center gap-2 text-orange-800">
-                      <div className="w-4 h-4 rounded-full bg-orange-500"></div>
-                      <span className="font-medium">Important</span>
-                    </div>
-                    <p className="text-sm text-orange-700 mt-2">
-                      You must manually configure Shopify discount codes to target specific products using tags or collections. 
-                      The system creates the discount codes, but Shopify admin configuration is required for product-specific targeting.
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="tag-manager" className="mt-6">
-            <ProductTagManager />
+            <CombinedProductManager />
           </TabsContent>
 
           <TabsContent value="preview" className="mt-6">
@@ -463,24 +292,12 @@ const AdminDashboard = () => {
               
               <Card>
                 <CardHeader>
-                  <CardTitle>Implementation Notes</CardTitle>
+                  <CardTitle>Extension Info</CardTitle>
                   <CardDescription>
-                    How the loyalty widget integrates with your store
+                    Technical details about your loyalty extension
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Customer Flow</p>
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <p>1. Customer enters phone number in cart</p>
-                      <p>2. System finds loyalty account via Square API</p>
-                      <p>3. Shows current points balance</p>
-                      <p>4. Displays available rewards</p>
-                      <p>5. Customer redeems points for discount</p>
-                      <p>6. Discount applies to cart total</p>
-                    </div>
-                  </div>
-                  
+                <CardContent>
                   <div className="p-4 bg-muted rounded-lg">
                     <p className="text-sm font-medium mb-2">Integration Details:</p>
                     <ul className="text-sm text-muted-foreground space-y-1">
