@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.sync-square-rewards]
 verify_jwt = false
+
+[functions.create-shopify-discount]
+verify_jwt = false

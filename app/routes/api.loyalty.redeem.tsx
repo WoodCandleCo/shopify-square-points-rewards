@@ -35,6 +35,23 @@ export const action: ActionFunction = async ({ request }) => {
       return json({ error: "Insufficient points" }, { status: 400 });
     }
 
+    // Create Shopify discount code
+    const shopifyDiscountResponse = await supabase.functions.invoke('create-shopify-discount', {
+      body: {
+        reward_id: reward.id,
+        discount_amount: reward.discount_amount,
+        discount_type: reward.discount_type,
+        max_discount_amount: reward.max_discount_amount
+      }
+    });
+
+    if (shopifyDiscountResponse.error) {
+      console.error('Shopify discount creation error:', shopifyDiscountResponse.error);
+      return json({ error: "Failed to create discount code" }, { status: 500 });
+    }
+
+    const discountData = shopifyDiscountResponse.data;
+
     // Call Square API to redeem reward
     const squareResponse = await fetch(`https://connect.squareup.com/v2/loyalty/rewards`, {
       method: 'POST',
@@ -82,7 +99,9 @@ export const action: ActionFunction = async ({ request }) => {
     return json({
       success: true,
       new_balance: newBalance,
-      square_reward_id: squareData.reward?.id
+      square_reward_id: squareData.reward?.id,
+      discount_code: discountData.discount_code,
+      discount_expires_at: discountData.expires_at
     });
 
   } catch (error) {
