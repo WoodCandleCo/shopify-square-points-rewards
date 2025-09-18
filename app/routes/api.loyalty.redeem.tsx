@@ -19,13 +19,13 @@ export const action: ActionFunction = async ({ request }) => {
       .from('loyalty_accounts')
       .select('*')
       .eq('id', loyalty_account_id)
-      .single();
+      .maybeSingle();
 
     const { data: reward } = await supabase
       .from('loyalty_rewards')
       .select('*')
       .eq('id', reward_id)
-      .single();
+      .maybeSingle();
 
     if (!loyaltyAccount || !reward) {
       return json({ error: "Invalid loyalty account or reward" }, { status: 404 });
@@ -35,13 +35,32 @@ export const action: ActionFunction = async ({ request }) => {
       return json({ error: "Insufficient points" }, { status: 400 });
     }
 
+    // Get Square reward definition for proper discount creation
+    const squareRewardResponse = await fetch(`https://connect.squareup.com/v2/loyalty/programs`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Square-Version': '2024-10-17'
+      }
+    });
+
+    let squareRewardDefinition = null;
+    if (squareRewardResponse.ok) {
+      const squarePrograms = await squareRewardResponse.json();
+      const program = squarePrograms.programs?.[0];
+      const rewardTier = program?.reward_tiers?.find((tier: any) => tier.id === reward.square_reward_id);
+      squareRewardDefinition = rewardTier;
+    }
+
     // Create Shopify discount code
     const shopifyDiscountResponse = await supabase.functions.invoke('create-shopify-discount', {
       body: {
         reward_id: reward.id,
         discount_amount: reward.discount_amount,
         discount_type: reward.discount_type,
-        max_discount_amount: reward.max_discount_amount
+        max_discount_amount: reward.max_discount_amount,
+        square_reward_data: squareRewardDefinition
       }
     });
 

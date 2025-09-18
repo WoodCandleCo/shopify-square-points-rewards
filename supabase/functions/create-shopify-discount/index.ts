@@ -19,9 +19,10 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
-    const { reward_id, customer_email, discount_amount, discount_type, max_discount_amount } = await req.json();
+    const { reward_id, customer_email, discount_amount, discount_type, max_discount_amount, square_reward_data } = await req.json();
 
     console.log('Creating Shopify discount for reward:', reward_id);
+    console.log('Square reward data:', JSON.stringify(square_reward_data, null, 2));
 
     // Get Shopify credentials
     const shopifyStoreUrl = Deno.env.get('SHOPIFY_STORE_URL');
@@ -34,39 +35,85 @@ serve(async (req) => {
     // Generate unique discount code
     const discountCode = `LOYALTY${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     
-    // Determine discount value based on type
-    let discountValue: string;
-    let valueType: string;
+    // Parse Square reward definition to understand the discount scope
+    const definition = square_reward_data?.definition || {};
+    const scope = definition.scope; // ORDER, CATEGORY, ITEM_VARIATION
+    const catalogObjectIds = definition.catalog_object_ids || [];
     
-    if (discount_type === 'PERCENTAGE') {
-      discountValue = (discount_amount / 100).toString(); // Convert percentage to decimal
-      valueType = 'percentage';
-    } else {
-      discountValue = (discount_amount / 100).toString(); // Convert cents to dollars
-      valueType = 'fixed_amount';
-    }
+    console.log('Discount scope:', scope, 'Catalog objects:', catalogObjectIds);
 
-    // Create discount in Shopify
-    const discountPayload = {
-      price_rule: {
-        title: `Loyalty Reward - ${discountCode}`,
-        value_type: valueType,
-        value: discountValue,
-        customer_selection: 'all',
-        target_type: 'line_item',
-        target_selection: 'all',
-        allocation_method: 'across',
-        usage_limit: 1,
-        once_per_customer: true,
-        starts_at: new Date().toISOString(),
-        ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
-        ...(max_discount_amount && valueType === 'percentage' && {
-          value_type: 'percentage',
-          value: discountValue,
-          allocation_limit: (max_discount_amount / 100).toString()
-        })
+    let discountPayload: any;
+
+    // Handle different discount types based on Square's scope
+    if (scope === 'ITEM_VARIATION' || scope === 'CATEGORY') {
+      // For specific items or categories, create a product-specific discount
+      // Since Shopify doesn't directly map Square catalog IDs, we'll create a percentage discount
+      // and include instructions in the title for manual application
+      
+      let title = `Loyalty Reward - ${discountCode}`;
+      if (scope === 'ITEM_VARIATION') {
+        title += ` (Free Item - Apply to specific product)`;
+      } else if (scope === 'CATEGORY') {
+        title += ` (Category Discount - Apply to category items)`;
       }
-    };
+
+      discountPayload = {
+        price_rule: {
+          title: title,
+          value_type: 'percentage',
+          value: '-100.0', // 100% off for free items
+          customer_selection: 'all',
+          target_type: 'line_item',
+          target_selection: 'all',
+          allocation_method: 'across',
+          usage_limit: 1,
+          once_per_customer: true,
+          starts_at: new Date().toISOString(),
+          ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          prerequisite_subtotal_range: {
+            greater_than_or_equal_to: '0.01'
+          }
+        }
+      };
+    } else {
+      // ORDER scope - apply to entire order
+      let valueType: string;
+      let value: string;
+      
+      if (discount_type === 'PERCENTAGE') {
+        valueType = 'percentage';
+        value = `-${discount_amount}.0`; // Shopify expects negative percentages
+      } else {
+        valueType = 'fixed_amount';
+        value = (discount_amount / 100).toString(); // Convert cents to dollars
+      }
+
+      discountPayload = {
+        price_rule: {
+          title: `Loyalty Reward - ${discountCode}`,
+          value_type: valueType,
+          value: value,
+          customer_selection: 'all',
+          target_type: 'line_item',
+          target_selection: 'all',
+          allocation_method: 'across',
+          usage_limit: 1,
+          once_per_customer: true,
+          starts_at: new Date().toISOString(),
+          ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          prerequisite_subtotal_range: {
+            greater_than_or_equal_to: '0.01'
+          }
+        }
+      };
+
+      // Add maximum discount amount for percentage discounts
+      if (discount_type === 'PERCENTAGE' && max_discount_amount) {
+        discountPayload.price_rule.value_type = 'percentage';
+        discountPayload.price_rule.value = `-${discount_amount}.0`;
+        discountPayload.price_rule.allocation_limit = (max_discount_amount / 100).toString();
+      }
+    }
 
     console.log('Creating price rule with payload:', JSON.stringify(discountPayload, null, 2));
 

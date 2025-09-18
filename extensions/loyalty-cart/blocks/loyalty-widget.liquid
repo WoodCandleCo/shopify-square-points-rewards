@@ -237,17 +237,29 @@
 
       const data = await response.json();
       
-      if (data.discount_code) {
+      if (data.success && data.discount_code) {
         // Apply discount code to cart
         applyDiscountCode(data.discount_code);
         
         // Update loyalty balance
-        loyaltyAccount.balance -= pointsRequired;
+        loyaltyAccount.balance = data.new_balance;
         updateLoyaltyDisplay();
         
-        alert('Reward redeemed! Discount applied to your cart.');
+        // Show appropriate success message based on discount type
+        const reward = availableRewards.find(r => r.id === rewardId);
+        let message = 'Reward redeemed! ';
+        
+        if (reward && reward.name.toLowerCase().includes('free ')) {
+          message += `Your free item discount (${data.discount_code}) has been applied. Please add the eligible item to your cart to see the discount.`;
+        } else if (reward && reward.discount_type === 'PERCENTAGE' && reward.max_discount_amount) {
+          message += `Your ${reward.discount_amount}% discount (up to $${(reward.max_discount_amount / 100).toFixed(2)}) has been applied to your cart.`;
+        } else {
+          message += `Your discount (${data.discount_code}) has been applied to your cart.`;
+        }
+        
+        alert(message);
       } else {
-        alert('Error redeeming reward');
+        alert('Error redeeming reward: ' + (data.error || 'Unknown error'));
       }
     } catch (error) {
       console.error('Error redeeming reward:', error);
@@ -296,12 +308,21 @@
     availableRewards.forEach(reward => {
       const rewardDiv = document.createElement('div');
       rewardDiv.className = 'reward-item';
+      
+      // Create more descriptive reward description
+      let description = reward.name;
+      if (reward.discount_type === 'PERCENTAGE' && reward.max_discount_amount) {
+        description += ` (up to $${(reward.max_discount_amount / 100).toFixed(2)})`;
+      } else if (reward.discount_type === 'FIXED_AMOUNT') {
+        description += ` ($${(reward.discount_amount / 100).toFixed(2)} off)`;
+      }
+      
       rewardDiv.innerHTML = `
         <div>
-          <p style="margin: 0; font-weight: 500;">${reward.name}</p>
+          <p style="margin: 0; font-weight: 500;">${description}</p>
           <p style="margin: 0; font-size: 12px; color: #6c757d;">${reward.points_required} points</p>
         </div>
-        <button class="reward-button" onclick="redeemReward('${reward.id}', ${reward.points_required}, ${reward.discount_value})">
+        <button class="reward-button" onclick="redeemReward('${reward.id}', ${reward.points_required})">
           Redeem
         </button>
       `;
