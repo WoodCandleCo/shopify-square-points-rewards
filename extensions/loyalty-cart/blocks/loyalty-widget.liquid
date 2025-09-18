@@ -1,0 +1,311 @@
+{% comment %}
+  Loyalty Program Widget for Cart Page/Drawer
+  Can be added to cart.liquid or cart-drawer.liquid templates
+{% endcomment %}
+
+<div id="loyalty-widget" class="loyalty-widget">
+  <style>
+    .loyalty-widget {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+      border: 1px solid #e9ecef;
+    }
+    .loyalty-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      margin-bottom: 12px;
+    }
+    .loyalty-content {
+      display: none;
+    }
+    .loyalty-content.expanded {
+      display: block;
+    }
+    .loyalty-balance {
+      font-weight: 600;
+      color: #28a745;
+    }
+    .loyalty-rewards {
+      margin-top: 12px;
+    }
+    .reward-item {
+      background: white;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .reward-button {
+      background: #007bff;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 12px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .reward-button:hover {
+      background: #0056b3;
+    }
+    .phone-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #ced4da;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+    .connect-button {
+      width: 100%;
+      background: #28a745;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 10px;
+      cursor: pointer;
+    }
+  </style>
+
+  <div class="loyalty-header" onclick="toggleLoyalty()">
+    <span>🎁 Loyalty Rewards</span>
+    <span id="loyalty-toggle">+</span>
+  </div>
+
+  <div id="loyalty-content" class="loyalty-content">
+    <div id="loyalty-loading" style="display: none;">
+      Loading loyalty account...
+    </div>
+
+    <div id="loyalty-login" style="display: block;">
+      <p style="margin-bottom: 8px; color: #6c757d; font-size: 14px;">
+        Enter your phone number to access rewards
+      </p>
+      <input 
+        type="tel" 
+        id="phone-input" 
+        class="phone-input" 
+        placeholder="+1 (555) 123-4567"
+      >
+      <button class="connect-button" onclick="connectLoyalty()">
+        Connect Loyalty Account
+      </button>
+    </div>
+
+    <div id="loyalty-account" style="display: none;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <p style="font-size: 12px; color: #6c757d; margin: 0;">Current Balance</p>
+          <p id="current-balance" class="loyalty-balance" style="margin: 0;">0 points</p>
+        </div>
+        <div>
+          <p style="font-size: 12px; color: #6c757d; margin: 0;">Lifetime Points</p>
+          <p id="lifetime-points" style="margin: 0; font-weight: 600;">0 points</p>
+        </div>
+      </div>
+
+      <div id="available-rewards" class="loyalty-rewards">
+        <!-- Rewards will be populated here -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let loyaltyExpanded = false;
+  let loyaltyAccount = null;
+  let availableRewards = [];
+
+  function toggleLoyalty() {
+    const content = document.getElementById('loyalty-content');
+    const toggle = document.getElementById('loyalty-toggle');
+    
+    loyaltyExpanded = !loyaltyExpanded;
+    
+    if (loyaltyExpanded) {
+      content.classList.add('expanded');
+      toggle.textContent = '−';
+      
+      // Load customer loyalty data if not already loaded
+      if (!loyaltyAccount) {
+        loadCustomerLoyalty();
+      }
+    } else {
+      content.classList.remove('expanded');
+      toggle.textContent = '+';
+    }
+  }
+
+  async function loadCustomerLoyalty() {
+    const customerId = {{ customer.id | json }};
+    const customerEmail = {{ customer.email | json }};
+    
+    if (!customerId && !customerEmail) return;
+
+    showLoading(true);
+
+    try {
+      const response = await fetch('{{ block.settings.square_app_id }}' + '/api/loyalty/account', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          customer_id: customerId,
+          email: customerEmail
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.loyalty_account) {
+        loyaltyAccount = data.loyalty_account;
+        availableRewards = data.available_rewards || [];
+        showLoyaltyAccount();
+      } else {
+        showLoyaltyLogin();
+      }
+    } catch (error) {
+      console.error('Error loading loyalty account:', error);
+      showLoyaltyLogin();
+    }
+
+    showLoading(false);
+  }
+
+  async function connectLoyalty() {
+    const phoneNumber = document.getElementById('phone-input').value;
+    
+    if (!phoneNumber) {
+      alert('Please enter your phone number');
+      return;
+    }
+
+    showLoading(true);
+
+    try {
+      const response = await fetch('{{ block.settings.square_app_id }}' + '/api/loyalty/lookup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone_number: phoneNumber
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.loyalty_account) {
+        loyaltyAccount = data.loyalty_account;
+        availableRewards = data.available_rewards || [];
+        showLoyaltyAccount();
+      } else {
+        alert('No loyalty account found for this phone number');
+      }
+    } catch (error) {
+      console.error('Error connecting loyalty account:', error);
+      alert('Error connecting to loyalty account');
+    }
+
+    showLoading(false);
+  }
+
+  async function redeemReward(rewardId, pointsRequired, discountValue) {
+    if (!loyaltyAccount || loyaltyAccount.balance < pointsRequired) {
+      alert('Insufficient points for this reward');
+      return;
+    }
+
+    try {
+      const response = await fetch('{{ block.settings.square_app_id }}' + '/api/loyalty/redeem', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          loyalty_account_id: loyaltyAccount.id,
+          reward_id: rewardId,
+          points_to_redeem: pointsRequired
+        })
+      });
+
+      const data = await response.json();
+      
+      if (data.discount_code) {
+        // Apply discount code to cart
+        applyDiscountCode(data.discount_code);
+        
+        // Update loyalty balance
+        loyaltyAccount.balance -= pointsRequired;
+        updateLoyaltyDisplay();
+        
+        alert('Reward redeemed! Discount applied to your cart.');
+      } else {
+        alert('Error redeeming reward');
+      }
+    } catch (error) {
+      console.error('Error redeeming reward:', error);
+      alert('Error redeeming reward');
+    }
+  }
+
+  function applyDiscountCode(discountCode) {
+    // Apply discount code to Shopify cart
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/discount/' + discountCode;
+    document.body.appendChild(form);
+    form.submit();
+  }
+
+  function showLoading(show) {
+    document.getElementById('loyalty-loading').style.display = show ? 'block' : 'none';
+    document.getElementById('loyalty-login').style.display = show ? 'none' : (!loyaltyAccount ? 'block' : 'none');
+    document.getElementById('loyalty-account').style.display = show ? 'none' : (loyaltyAccount ? 'block' : 'none');
+  }
+
+  function showLoyaltyLogin() {
+    document.getElementById('loyalty-login').style.display = 'block';
+    document.getElementById('loyalty-account').style.display = 'none';
+  }
+
+  function showLoyaltyAccount() {
+    document.getElementById('loyalty-login').style.display = 'none';
+    document.getElementById('loyalty-account').style.display = 'block';
+    updateLoyaltyDisplay();
+  }
+
+  function updateLoyaltyDisplay() {
+    document.getElementById('current-balance').textContent = loyaltyAccount.balance + ' points';
+    document.getElementById('lifetime-points').textContent = loyaltyAccount.lifetime_points + ' points';
+    
+    const rewardsContainer = document.getElementById('available-rewards');
+    rewardsContainer.innerHTML = '';
+    
+    if (availableRewards.length === 0) {
+      rewardsContainer.innerHTML = '<p style="color: #6c757d; font-size: 14px;">No rewards available</p>';
+      return;
+    }
+
+    availableRewards.forEach(reward => {
+      const rewardDiv = document.createElement('div');
+      rewardDiv.className = 'reward-item';
+      rewardDiv.innerHTML = `
+        <div>
+          <p style="margin: 0; font-weight: 500;">${reward.name}</p>
+          <p style="margin: 0; font-size: 12px; color: #6c757d;">${reward.points_required} points</p>
+        </div>
+        <button class="reward-button" onclick="redeemReward('${reward.id}', ${reward.points_required}, ${reward.discount_value})">
+          Redeem
+        </button>
+      `;
+      rewardsContainer.appendChild(rewardDiv);
+    });
+  }
+</script>

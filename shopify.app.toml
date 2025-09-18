@@ -25,6 +25,6 @@ embedded = false
 automatically_update_urls_on_dev = true
 dev_store_url = "your-dev-store.myshopify.com"
 
-[[checkout.extensions]]
-name = "loyalty-checkout"
-handle = "loyalty-checkout"
+[[app_extensions]]
+name = "loyalty-cart"
+handle = "loyalty-cart"

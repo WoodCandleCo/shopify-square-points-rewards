@@ -1,11 +1,5 @@
-name = "loyalty-checkout"
-type = "checkout_ui_extension"
-
-[[extensions.targeting]]
-target = "purchase.checkout.block.render"
-
-[extensions.capabilities]
-network_access = true
+name = "loyalty-cart"
+type = "theme_app_extension"
 
 [extensions.settings]
 [[extensions.settings.fields]]
