@@ -19,6 +19,7 @@ const AdminDashboard = () => {
   const [rewards, setRewards] = useState([]);
   const [loadingRewards, setLoadingRewards] = useState(false);
   const [loadingAutoTag, setLoadingAutoTag] = useState(false);
+  const [taggedProducts, setTaggedProducts] = useState([]);
 
   useEffect(() => {
     loadRewards();
@@ -79,6 +80,7 @@ const AdminDashboard = () => {
       if (error) throw error;
 
       if (data?.success) {
+        setTaggedProducts(data.results || []);
         toast({
           title: "Products tagged successfully",
           description: `Tagged ${data.tagged_count} products with loyalty tags.`
@@ -308,7 +310,7 @@ const AdminDashboard = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
+                <div className="space-y-6">
                   <div className="flex gap-4">
                     <Button 
                       onClick={autoTagProducts} 
@@ -318,6 +320,47 @@ const AdminDashboard = () => {
                       {loadingAutoTag ? 'Tagging Products...' : 'Auto-Tag Products'}
                     </Button>
                   </div>
+                  
+                  {taggedProducts.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-4">Tagged Products Results</h4>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Product Name</TableHead>
+                            <TableHead>Shopify Product ID</TableHead>
+                            <TableHead>Tag Applied</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {taggedProducts.map((result: any, index: number) => (
+                            <TableRow key={index}>
+                              <TableCell className="font-medium">
+                                {result.product_name || result.mapping_name || 'Unknown'}
+                              </TableCell>
+                              <TableCell>
+                                {result.product_id || '-'}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary">
+                                  {result.tag_added || '-'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={result.success ? "default" : "destructive"}>
+                                  {result.success 
+                                    ? (result.already_tagged ? "Already Tagged" : "Tagged") 
+                                    : "Failed"
+                                  }
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                   
                   <div className="p-4 bg-muted rounded-lg">
                     <h4 className="font-medium mb-2">How Auto-Tagging Works:</h4>

@@ -128,7 +128,9 @@ serve(async (req) => {
               results.push({
                 product_name: product.title,
                 product_id: product.id,
+                product_handle: product.handle,
                 tag_added: mapping.shopify_tag,
+                mapping_type: mapping.mapping_type,
                 success: true
               });
             } else {
