@@ -1,1 +1,7 @@
 project_id = "oxsxkwrsbpcmwghfmooz"
+
+[functions.square-test-connection]
+verify_jwt = false
+
+[functions.sync-square-rewards]
+verify_jwt = false
