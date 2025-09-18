@@ -103,13 +103,28 @@ const MockCheckoutPreview = () => {
     if (!loyaltyAccount) return;
     
     try {
-      // Calculate discount amount based on reward type
+      // Calculate discount amount based on reward type and scope
       let discountAmount = 0;
+      let applicableItemsTotal = 0;
+      
+      // Determine which items the reward applies to based on scope
+      if (reward.scope === 'ITEM_VARIATION' && reward.applicable_product_ids) {
+        // Apply to specific products only
+        applicableItemsTotal = cartItems
+          .filter(item => reward.applicable_product_ids.includes(item.id.toString()))
+          .reduce((total, item) => total + (item.price * item.quantity), 0);
+      } else if (reward.scope === 'CATEGORY' && reward.applicable_category_ids) {
+        // Apply to specific categories only (for demo, assume all items are in category)
+        applicableItemsTotal = calculateSubtotal();
+      } else {
+        // ORDER scope - apply to entire cart
+        applicableItemsTotal = calculateSubtotal();
+      }
+      
       if (reward.discount_type === 'FIXED_AMOUNT') {
         discountAmount = reward.discount_amount / 100; // Convert cents to dollars
       } else if (reward.discount_type === 'PERCENTAGE') {
-        const subtotal = calculateSubtotal();
-        discountAmount = (subtotal * (reward.discount_amount || 0)) / 100;
+        discountAmount = (applicableItemsTotal * (reward.discount_amount || 0)) / 100;
         if (reward.max_discount_amount) {
           discountAmount = Math.min(discountAmount, reward.max_discount_amount / 100);
         }
