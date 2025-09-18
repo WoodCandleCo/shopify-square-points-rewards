@@ -80,16 +80,16 @@ const AdminDashboard = () => {
 
   const formatDiscount = (reward: any) => {
     if (reward.discount_type === 'FIXED_AMOUNT') {
-      return `$${(reward.discount_amount / 100).toFixed(2)}`;
-    } else if (reward.discount_type === 'FIXED_PERCENTAGE') {
-      return `${reward.discount_amount}%`;
+      return `$${(reward.discount_amount / 100).toFixed(2)} off`;
+    } else if (reward.discount_type === 'PERCENTAGE') {
+      return `${reward.discount_amount}% off`;
     }
     return 'N/A';
   };
 
   const formatMaxDiscount = (reward: any) => {
-    if (reward.discount_type === 'FIXED_PERCENTAGE' && reward.max_discount_amount) {
-      return `$${(reward.max_discount_amount / 100).toFixed(2)} max`;
+    if (reward.discount_type === 'PERCENTAGE' && reward.max_discount_amount) {
+      return `up to $${(reward.max_discount_amount / 100).toFixed(2)}`;
     }
     return '-';
   };
