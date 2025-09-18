@@ -75,24 +75,70 @@ serve(async (req) => {
     const rewards = program.reward_tiers || []
 
     console.log(`Found ${rewards.length} reward tiers`)
+    console.log('Sample reward structure:', JSON.stringify(rewards[0], null, 2))
 
     let syncedCount = 0
 
     // Sync each reward to the database
     for (const reward of rewards) {
       try {
+        console.log(`Processing reward:`, JSON.stringify(reward, null, 2))
+        
+        // Extract discount information from the reward structure
+        let discountType = 'UNKNOWN'
+        let discountAmount = 0
+        let maxDiscountAmount = null
+        let description = 'Reward'
+
+        // Check if there's a pricing rule definition
+        if (reward.pricing_rule_reference) {
+          console.log('Found pricing rule reference:', reward.pricing_rule_reference)
+          // We'll need to fetch the actual pricing rule details
+          description = `${reward.points} points reward`
+        }
+
+        // Check for direct discount definition (some loyalty programs structure it this way)
+        if (reward.discount) {
+          const discount = reward.discount
+          if (discount.discount_type === 'FIXED_PERCENTAGE') {
+            discountType = 'FIXED_PERCENTAGE'
+            discountAmount = parseFloat(discount.percentage) || 0
+            if (discount.max_discount_money?.amount) {
+              maxDiscountAmount = discount.max_discount_money.amount
+            }
+            description = `${discountAmount}% off`
+          } else if (discount.discount_type === 'FIXED_AMOUNT') {
+            discountType = 'FIXED_AMOUNT'
+            discountAmount = discount.amount_money?.amount || 0
+            description = `$${(discountAmount / 100).toFixed(2)} off`
+          }
+        }
+
+        // Check for definition-based structure
+        if (reward.definition?.discount) {
+          const discount = reward.definition.discount
+          if (discount.percentage) {
+            discountType = 'FIXED_PERCENTAGE'
+            discountAmount = parseFloat(discount.percentage)
+            if (discount.max_discount_money?.amount) {
+              maxDiscountAmount = discount.max_discount_money.amount
+            }
+            description = `${discountAmount}% off`
+          } else if (discount.amount_money?.amount) {
+            discountType = 'FIXED_AMOUNT'
+            discountAmount = discount.amount_money.amount
+            description = `$${(discountAmount / 100).toFixed(2)} off`
+          }
+        }
+
         const rewardData = {
           square_reward_id: reward.id,
           name: reward.name || `${reward.points} Points Reward`,
-          description: reward.definition?.discount?.percentage ? 
-            `${reward.definition.discount.percentage}% off` :
-            `$${(reward.definition?.discount?.amount_money?.amount || 0) / 100} off`,
+          description,
           points_required: reward.points || 0,
-          discount_type: reward.definition?.discount?.percentage ? 'FIXED_PERCENTAGE' : 'FIXED_AMOUNT',
-          discount_amount: reward.definition?.discount?.percentage || 
-            (reward.definition?.discount?.amount_money?.amount || 0),
-          max_discount_amount: reward.definition?.discount?.percentage ? 
-            (reward.definition?.discount?.max_discount_money?.amount || null) : null,
+          discount_type: discountType,
+          discount_amount: discountAmount,
+          max_discount_amount: maxDiscountAmount,
           is_active: true
         }
 
