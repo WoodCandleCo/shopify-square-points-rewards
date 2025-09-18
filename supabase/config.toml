@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.create-shopify-discount]
 verify_jwt = false
+
+[functions.auto-tag-products]
+verify_jwt = false

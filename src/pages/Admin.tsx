@@ -18,6 +18,7 @@ const AdminDashboard = () => {
   const { toast } = useToast();
   const [rewards, setRewards] = useState([]);
   const [loadingRewards, setLoadingRewards] = useState(false);
+  const [loadingAutoTag, setLoadingAutoTag] = useState(false);
 
   useEffect(() => {
     loadRewards();
@@ -67,6 +68,33 @@ const AdminDashboard = () => {
       });
     } finally {
       setLoadingRewards(false);
+    }
+  };
+
+  const autoTagProducts = async () => {
+    setLoadingAutoTag(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('auto-tag-products');
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: "Products tagged successfully",
+          description: `Tagged ${data.tagged_count} products with loyalty tags.`
+        });
+      } else {
+        throw new Error(data?.error || 'Auto-tagging failed');
+      }
+    } catch (error) {
+      console.error('Error auto-tagging products:', error);
+      toast({
+        title: "Auto-tagging failed",
+        description: "Could not automatically tag products. Check your Shopify API connection.",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingAutoTag(false);
     }
   };
 
@@ -281,8 +309,31 @@ const AdminDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
+                  <div className="flex gap-4">
+                    <Button 
+                      onClick={autoTagProducts} 
+                      disabled={loadingAutoTag}
+                      className="flex-1"
+                    >
+                      {loadingAutoTag ? 'Tagging Products...' : 'Auto-Tag Products'}
+                    </Button>
+                  </div>
+                  
                   <div className="p-4 bg-muted rounded-lg">
-                    <h4 className="font-medium mb-2">Setup Instructions:</h4>
+                    <h4 className="font-medium mb-2">How Auto-Tagging Works:</h4>
+                    <ol className="text-sm text-muted-foreground space-y-1">
+                      <li>1. Searches your Shopify store for products matching loyalty item names</li>
+                      <li>2. Automatically adds the appropriate loyalty tags to matching products:</li>
+                      <li className="ml-4">• Matches → <code>loyalty-matches</code></li>
+                      <li className="ml-4">• Wick trimmers → <code>loyalty-wick-trimmer</code></li>
+                      <li className="ml-4">• 7oz candles → <code>loyalty-7oz-candle</code></li>
+                      <li className="ml-4">• Wax melts → <code>loyalty-wax-melt</code></li>
+                      <li>3. Free product discounts will then apply only to tagged products</li>
+                    </ol>
+                  </div>
+                  
+                  <div className="p-4 bg-muted rounded-lg">
+                    <h4 className="font-medium mb-2">Manual Setup (Alternative):</h4>
                     <ol className="text-sm text-muted-foreground space-y-1">
                       <li>1. Tag your Shopify products with the corresponding loyalty tags:</li>
                       <li className="ml-4">• Tag matches with: <code>loyalty-matches</code></li>
