@@ -52,18 +52,48 @@ serve(async (req) => {
       console.log(`Processing mapping for: ${mapping.product_name}`);
       
       try {
-        // Search for products by name/title
-        const searchTerms = [
-          mapping.product_name.toLowerCase(),
-          mapping.product_name.replace(/\s+/g, ''),
-          mapping.product_name.split(' ')[0] // First word
-        ];
+        // Define more flexible search terms for each category
+        let searchTerms = [];
+        const productName = mapping.product_name.toLowerCase();
+        
+        if (productName.includes('match')) {
+          searchTerms = ['match', 'matches', 'lighter'];
+        } else if (productName.includes('wick trimmer')) {
+          searchTerms = ['wick trimmer', 'trimmer', 'wick cutter'];
+        } else if (productName.includes('7oz candle') || productName.includes('candle')) {
+          searchTerms = ['candle', '7oz', '7 oz', 'soy candle', 'jar candle'];
+        } else if (productName.includes('wax melt')) {
+          searchTerms = ['wax melt', 'melt', 'wax', 'melts', 'tart'];
+        } else {
+          // Fallback to original name
+          searchTerms = [productName, productName.replace(/\s+/g, '')];
+        }
+
+        console.log(`Using search terms for ${mapping.product_name}:`, searchTerms);
 
         let foundProducts = [];
 
+        // Search using multiple terms and methods
         for (const searchTerm of searchTerms) {
-          const response = await fetch(
-            `https://${shopifyStoreUrl}/admin/api/2024-10/products.json?title=${encodeURIComponent(searchTerm)}&limit=10`,
+          // Search by title
+          let response = await fetch(
+            `https://${shopifyStoreUrl}/admin/api/2024-10/products.json?title=${encodeURIComponent(searchTerm)}&limit=50`,
+            {
+              headers: {
+                'X-Shopify-Access-Token': shopifyAccessToken,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+
+          if (response.ok) {
+            const data = await response.json();
+            foundProducts = foundProducts.concat(data.products || []);
+          }
+
+          // Also search by vendor/tag if we have specific terms
+          response = await fetch(
+            `https://${shopifyStoreUrl}/admin/api/2024-10/products.json?vendor=${encodeURIComponent(searchTerm)}&limit=50`,
             {
               headers: {
                 'X-Shopify-Access-Token': shopifyAccessToken,
@@ -85,14 +115,28 @@ serve(async (req) => {
 
         console.log(`Found ${foundProducts.length} products for ${mapping.product_name}`);
 
-        // Filter products that likely match our item
+        // Better product matching logic based on category
         const matchingProducts = foundProducts.filter(product => {
           const title = product.title.toLowerCase();
-          const productName = mapping.product_name.toLowerCase();
+          const description = (product.body_html || '').toLowerCase();
+          const tags = (product.tags || '').toLowerCase();
+          const vendor = (product.vendor || '').toLowerCase();
           
-          return title.includes(productName) || 
-                 productName.includes(title) ||
-                 title.includes(productName.split(' ')[0]);
+          // Combine all searchable text
+          const allText = `${title} ${description} ${tags} ${vendor}`;
+          
+          if (productName.includes('match')) {
+            return allText.includes('match') || allText.includes('lighter');
+          } else if (productName.includes('wick trimmer')) {
+            return allText.includes('wick') && allText.includes('trimmer');
+          } else if (productName.includes('candle')) {
+            return allText.includes('candle');
+          } else if (productName.includes('wax melt')) {
+            return allText.includes('wax') && (allText.includes('melt') || allText.includes('tart'));
+          }
+          
+          // Fallback to original logic
+          return searchTerms.some(term => allText.includes(term.toLowerCase()));
         });
 
         console.log(`${matchingProducts.length} products match criteria for ${mapping.product_name}`);
