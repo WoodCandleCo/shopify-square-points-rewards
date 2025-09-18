@@ -69,52 +69,63 @@ serve(async (req) => {
     const allProductsData = await allProductsResponse.json();
     const allProducts = allProductsData.products || [];
     
-    // Fetch collections and their products
-    const collectionsResponse = await fetch(
-      `https://${shopifyStoreUrl}/admin/api/2024-10/collections.json?fields=id,title,handle,products`,
-      {
-        headers: {
-          'X-Shopify-Access-Token': shopifyAccessToken,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-
-    let collections = [];
+    // Fetch collections and build product->collection map using REST endpoints
     let productCollectionMap = new Map(); // Map product ID to collection names
-    
-    if (collectionsResponse.ok) {
-      const collectionsData = await collectionsResponse.json();
-      collections = collectionsData.collections || [];
-      console.log('Found collections:', collections.map(c => c.title));
-      
-      // For each collection, get its products
-      for (const collection of collections) {
-        const collectionProductsResponse = await fetch(
-          `https://${shopifyStoreUrl}/admin/api/2024-10/collections/${collection.id}/products.json?fields=id`,
-          {
-            headers: {
-              'X-Shopify-Access-Token': shopifyAccessToken,
-              'Content-Type': 'application/json'
-            }
+
+    async function fetchCollections(endpoint) {
+      const res = await fetch(
+        `https://${shopifyStoreUrl}/admin/api/2024-10/${endpoint}.json?fields=id,title,handle`,
+        {
+          headers: {
+            'X-Shopify-Access-Token': shopifyAccessToken,
+            'Content-Type': 'application/json'
           }
-        );
-        
-        if (collectionProductsResponse.ok) {
-          const collectionProductsData = await collectionProductsResponse.json();
-          const collectionProducts = collectionProductsData.products || [];
-          
-          // Map each product to this collection
-          collectionProducts.forEach(product => {
-            if (!productCollectionMap.has(product.id)) {
-              productCollectionMap.set(product.id, []);
-            }
-            productCollectionMap.get(product.id).push(collection.title.toLowerCase());
-          });
         }
+      );
+      if (!res.ok) {
+        const txt = await res.text();
+        console.warn(`Failed to fetch ${endpoint}:`, txt);
+        return [];
+      }
+      const data = await res.json();
+      // endpoint returns { custom_collections: [] } or { smart_collections: [] }
+      return data.custom_collections || data.smart_collections || [];
+    }
+
+    const customCollections = await fetchCollections('custom_collections');
+    const smartCollections = await fetchCollections('smart_collections');
+    const collections = [...customCollections, ...smartCollections];
+
+    console.log('Found collections:', collections.map(c => c.title));
+
+    // For each collection, fetch products using collection_id filter
+    for (const collection of collections) {
+      const collectionProductsResponse = await fetch(
+        `https://${shopifyStoreUrl}/admin/api/2024-10/products.json?collection_id=${collection.id}&fields=id`,
+        {
+          headers: {
+            'X-Shopify-Access-Token': shopifyAccessToken,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (collectionProductsResponse.ok) {
+        const collectionProductsData = await collectionProductsResponse.json();
+        const collectionProducts = collectionProductsData.products || [];
+
+        collectionProducts.forEach((product) => {
+          if (!productCollectionMap.has(product.id)) {
+            productCollectionMap.set(product.id, []);
+          }
+          productCollectionMap.get(product.id).push((collection.title || '').toLowerCase());
+        });
+      } else {
+        const txt = await collectionProductsResponse.text();
+        console.warn(`Failed to get products for collection ${collection.id}:`, txt);
       }
     }
-    
+
     console.log(`Found ${allProducts.length} total products in store`);
     if (allProducts.length > 0) {
       console.log('Sample product info:');
