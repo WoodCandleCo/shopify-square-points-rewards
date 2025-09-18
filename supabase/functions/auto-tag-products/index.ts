@@ -27,23 +27,9 @@ serve(async (req) => {
       throw new Error('Missing Shopify credentials');
     }
 
-    // Clean up the store URL to ensure it's in the correct format
-    // Remove any protocol and path, extract just the domain
+    // Clean up the store URL - remove protocol if present
     shopifyStoreUrl = shopifyStoreUrl.replace(/^https?:\/\//, '');
-    shopifyStoreUrl = shopifyStoreUrl.replace(/\/.*$/, '');
-    
-    // If it's an admin URL, extract the store name
-    if (shopifyStoreUrl.includes('admin.shopify.com')) {
-      const match = shopifyStoreUrl.match(/store\/([^\/]+)/);
-      if (match) {
-        shopifyStoreUrl = `${match[1]}.myshopify.com`;
-      }
-    }
-
-    // Ensure it ends with .myshopify.com
-    if (!shopifyStoreUrl.includes('.myshopify.com')) {
-      shopifyStoreUrl = `${shopifyStoreUrl}.myshopify.com`;
-    }
+    shopifyStoreUrl = shopifyStoreUrl.replace(/\/$/, ''); // Remove trailing slash
 
     console.log('Using Shopify store URL:', shopifyStoreUrl);
 
