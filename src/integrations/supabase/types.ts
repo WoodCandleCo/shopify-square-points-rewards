@@ -87,6 +87,7 @@ export type Database = {
           discount_type: string | null
           id: string
           is_active: boolean
+          max_discount_amount: number | null
           name: string
           points_required: number
           square_reward_id: string
@@ -99,6 +100,7 @@ export type Database = {
           discount_type?: string | null
           id?: string
           is_active?: boolean
+          max_discount_amount?: number | null
           name: string
           points_required: number
           square_reward_id: string
@@ -111,6 +113,7 @@ export type Database = {
           discount_type?: string | null
           id?: string
           is_active?: boolean
+          max_discount_amount?: number | null
           name?: string
           points_required?: number
           square_reward_id?: string
