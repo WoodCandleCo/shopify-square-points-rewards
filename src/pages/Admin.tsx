@@ -7,8 +7,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Eye, Gift } from "lucide-react";
+import { Settings, Eye, Gift, Tag } from "lucide-react";
 import MockCheckoutPreview from "@/components/MockCheckoutPreview";
+import ProductTagManager from "@/components/ProductTagManager";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -162,7 +163,27 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="settings" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="settings" className="flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Settings
+            </TabsTrigger>
+            <TabsTrigger value="rewards" className="flex items-center gap-2">
+              <Gift className="w-4 h-4" />
+              Rewards
+            </TabsTrigger>
+            <TabsTrigger value="mappings" className="flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Product Mapping
+            </TabsTrigger>
+            <TabsTrigger value="tag-manager" className="flex items-center gap-2">
+              <Tag className="w-4 h-4" />
+              Tag Manager
+            </TabsTrigger>
+            <TabsTrigger value="preview" className="flex items-center gap-2">
+              <Eye className="w-4 h-4" />
+              Preview
+            </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
               Settings
@@ -437,6 +458,10 @@ const AdminDashboard = () => {
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="tag-manager" className="mt-6">
+            <ProductTagManager />
           </TabsContent>
 
           <TabsContent value="preview" className="mt-6">
