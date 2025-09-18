@@ -184,24 +184,7 @@ const AdminDashboard = () => {
               <Eye className="w-4 h-4" />
               Preview
             </TabsTrigger>
-            <TabsTrigger value="settings" className="flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              Settings
-            </TabsTrigger>
-            <TabsTrigger value="rewards" className="flex items-center gap-2">
-              <Gift className="w-4 h-4" />
-              Rewards
-            </TabsTrigger>
-            <TabsTrigger value="mappings" className="flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              Product Mapping
-            </TabsTrigger>
-            <TabsTrigger value="preview" className="flex items-center gap-2">
-              <Eye className="w-4 h-4" />
-              Preview
-            </TabsTrigger>
           </TabsList>
-
           <TabsContent value="settings" className="mt-6">
             <Card>
               <CardHeader>
