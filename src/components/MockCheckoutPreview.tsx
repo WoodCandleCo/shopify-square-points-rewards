@@ -63,29 +63,29 @@ const MockCheckoutPreview = () => {
     
     setIsLoading(true);
     try {
-      // Use real loyalty lookup API
-      const response = await fetch('/api/loyalty.lookup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone_number: phoneNumber })
+      // Use Supabase lookup function directly
+      const { data, error } = await supabase.functions.invoke('sync-square-rewards');
+      
+      if (error) throw error;
+
+      // For demo purposes, simulate finding an account
+      const mockAccount = {
+        id: 'demo_account_' + Date.now(),
+        balance: 1250,
+        points_earned_lifetime: 3500
+      };
+      
+      setLoyaltyAccount(mockAccount);
+      
+      // Filter available rewards based on balance
+      const eligibleRewards = availableRewards.filter(
+        reward => reward.points_required <= mockAccount.balance
+      );
+      
+      toast({
+        title: "Account Connected",
+        description: `Demo account connected with ${mockAccount.balance} points!`
       });
-      
-      const data = await response.json();
-      
-      if (data.loyalty_account) {
-        setLoyaltyAccount(data.loyalty_account);
-        setAvailableRewards(data.available_rewards || []);
-        toast({
-          title: "Account Connected",
-          description: `Found loyalty account with ${data.loyalty_account.balance} points!`
-        });
-      } else {
-        toast({
-          title: "No Account Found",
-          description: "No loyalty account found with this phone number.",
-          variant: "destructive"
-        });
-      }
     } catch (error) {
       console.error('Error connecting loyalty account:', error);
       toast({
@@ -102,33 +102,21 @@ const MockCheckoutPreview = () => {
     if (!loyaltyAccount) return;
     
     try {
-      // Use real reward redemption API
-      const response = await fetch('/api/loyalty.redeem', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          loyalty_account_id: loyaltyAccount.id,
-          reward_id: reward.id 
-        })
+      // For demo purposes, simulate redemption
+      setLoyaltyAccount({
+        ...loyaltyAccount,
+        balance: loyaltyAccount.balance - reward.points_required
       });
       
-      const data = await response.json();
+      toast({
+        title: "Reward Redeemed!",
+        description: `${reward.name} has been applied to your cart.`
+      });
       
-      if (data.success) {
-        setLoyaltyAccount({
-          ...loyaltyAccount,
-          balance: loyaltyAccount.balance - reward.points_required
-        });
-        toast({
-          title: "Reward Redeemed!",
-          description: `${reward.name} has been applied to your cart.`
-        });
-        
-        // Update available rewards
-        setAvailableRewards(prev => prev.filter(r => r.points_required <= (loyaltyAccount.balance - reward.points_required)));
-      } else {
-        throw new Error(data.error || 'Redemption failed');
-      }
+      // Update available rewards based on new balance
+      const newBalance = loyaltyAccount.balance - reward.points_required;
+      setAvailableRewards(prev => prev.filter(r => r.points_required <= newBalance));
+      
     } catch (error) {
       console.error('Error redeeming reward:', error);
       toast({
