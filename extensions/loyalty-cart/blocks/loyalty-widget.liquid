@@ -250,7 +250,11 @@
         let message = 'Reward redeemed! ';
         
         if (reward && reward.name.toLowerCase().includes('free ')) {
-          message += `Your free item discount (${data.discount_code}) has been applied. Please add the eligible item to your cart to see the discount.`;
+          // For free items, provide specific instructions
+          const itemName = reward.name.replace('Free ', '').toLowerCase();
+          message += `Your discount code (${data.discount_code}) has been applied. `;
+          message += `Please add the ${itemName} to your cart to see the discount. `;
+          message += `This discount is limited to prevent abuse.`;
         } else if (reward && reward.discount_type === 'PERCENTAGE' && reward.max_discount_amount) {
           message += `Your ${reward.discount_amount}% discount (up to $${(reward.max_discount_amount / 100).toFixed(2)}) has been applied to your cart.`;
         } else {
