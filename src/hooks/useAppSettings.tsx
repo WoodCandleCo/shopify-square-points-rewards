@@ -32,8 +32,17 @@ export function useAppSettings() {
       if (data) {
         const settingsMap: any = {};
         data.forEach(item => {
-          settingsMap[item.key] = typeof item.value === 'string' ? 
-            JSON.parse(item.value) : item.value;
+          // Handle different value types properly
+          let parsedValue = item.value;
+          if (typeof item.value === 'string') {
+            try {
+              parsedValue = JSON.parse(item.value);
+            } catch {
+              // If JSON.parse fails, use the string value as-is
+              parsedValue = item.value;
+            }
+          }
+          settingsMap[item.key] = parsedValue;
         });
         setSettings(prev => ({ ...prev, ...settingsMap }));
       }
