@@ -17,8 +17,15 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
+    --primary: 242 100% 50%;
     --primary-foreground: 210 40% 98%;
+    
+    --loyalty-gold: 45 100% 51%;
+    --loyalty-silver: 210 16% 82%;
+    --loyalty-bronze: 25 75% 47%;
+    
+    --success: 142 76% 36%;
+    --success-foreground: 355 100% 97%;
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;

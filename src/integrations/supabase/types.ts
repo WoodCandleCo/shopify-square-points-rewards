@@ -14,7 +14,167 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      loyalty_accounts: {
+        Row: {
+          balance: number
+          created_at: string
+          id: string
+          points_earned_lifetime: number
+          program_id: string
+          square_loyalty_account_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          id?: string
+          points_earned_lifetime?: number
+          program_id: string
+          square_loyalty_account_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          id?: string
+          points_earned_lifetime?: number
+          program_id?: string
+          square_loyalty_account_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_accounts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      loyalty_rewards: {
+        Row: {
+          created_at: string
+          description: string | null
+          discount_amount: number | null
+          discount_type: string | null
+          id: string
+          is_active: boolean
+          name: string
+          points_required: number
+          square_reward_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          discount_amount?: number | null
+          discount_type?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          points_required: number
+          square_reward_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          discount_amount?: number | null
+          discount_type?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          points_required?: number
+          square_reward_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      loyalty_transactions: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          loyalty_account_id: string
+          points: number
+          square_transaction_id: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          loyalty_account_id: string
+          points: number
+          square_transaction_id?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          loyalty_account_id?: string
+          points?: number
+          square_transaction_id?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_transactions_loyalty_account_id_fkey"
+            columns: ["loyalty_account_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_transactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          square_customer_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          square_customer_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          square_customer_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
