@@ -56,6 +56,8 @@ export function useAppSettings() {
         .upsert({ 
           key, 
           value: JSON.stringify(value) 
+        }, {
+          onConflict: 'key'
         });
 
       if (error) throw error;
