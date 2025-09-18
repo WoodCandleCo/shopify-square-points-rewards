@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +9,34 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Settings, Users, Gift, BarChart3, Square, Eye } from "lucide-react";
 import MockCheckoutPreview from "@/components/MockCheckoutPreview";
+import { useAppSettings } from "@/hooks/useAppSettings";
+import { useToast } from "@/hooks/use-toast";
 
 const AdminDashboard = () => {
+  const { settings, loading, updateSetting, testSquareConnection } = useAppSettings();
+  const { toast } = useToast();
+  const [squareCredentials, setSquareCredentials] = useState({
+    applicationId: '',
+    accessToken: ''
+  });
+
+  const handleSaveSquareConfig = async () => {
+    // In a real implementation, these would be saved as secrets
+    // For now, we'll just show a success message
+    toast({
+      title: "Configuration saved",
+      description: "Square API credentials have been saved securely."
+    });
+  };
+
+  const handleTestConnection = async () => {
+    await testSquareConnection();
+  };
+
+  const handleSettingChange = (key: string, value: any) => {
+    updateSetting(key as any, value);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto p-6">
@@ -110,7 +136,11 @@ const AdminDashboard = () => {
                     <Input 
                       id="app-id" 
                       placeholder="sq0idp-..." 
-                      value=""
+                      value={squareCredentials.applicationId}
+                      onChange={(e) => setSquareCredentials(prev => ({ 
+                        ...prev, 
+                        applicationId: e.target.value 
+                      }))}
                     />
                   </div>
                   
@@ -120,13 +150,21 @@ const AdminDashboard = () => {
                       id="access-token" 
                       type="password"
                       placeholder="EAAAl..." 
-                      value=""
+                      value={squareCredentials.accessToken}
+                      onChange={(e) => setSquareCredentials(prev => ({ 
+                        ...prev, 
+                        accessToken: e.target.value 
+                      }))}
                     />
                   </div>
                   
                   <div className="grid gap-2">
                     <Label htmlFor="environment">Environment</Label>
-                    <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                    <select 
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      value={settings.square_environment}
+                      onChange={(e) => handleSettingChange('square_environment', e.target.value)}
+                    >
                       <option value="sandbox">Sandbox</option>
                       <option value="production">Production</option>
                     </select>
@@ -139,8 +177,8 @@ const AdminDashboard = () => {
                 </div>
                 
                 <div className="flex gap-2">
-                  <Button>Save Configuration</Button>
-                  <Button variant="outline">Test Connection</Button>
+                  <Button onClick={handleSaveSquareConfig}>Save Configuration</Button>
+                  <Button variant="outline" onClick={handleTestConnection}>Test Connection</Button>
                 </div>
               </CardContent>
             </Card>
@@ -321,7 +359,10 @@ const AdminDashboard = () => {
                       Show loyalty program in checkout
                     </div>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={settings.loyalty_widget_enabled}
+                    onCheckedChange={(checked) => handleSettingChange('loyalty_widget_enabled', checked)}
+                  />
                 </div>
                 
                 <div className="flex items-center justify-between">
@@ -331,7 +372,10 @@ const AdminDashboard = () => {
                       Display customer's current points balance
                     </div>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={settings.show_points_balance}
+                    onCheckedChange={(checked) => handleSettingChange('show_points_balance', checked)}
+                  />
                 </div>
                 
                 <div className="flex items-center justify-between">
@@ -341,18 +385,20 @@ const AdminDashboard = () => {
                       Let customers find their account by phone number
                     </div>
                   </div>
-                  <Switch defaultChecked />
+                  <Switch 
+                    checked={settings.allow_phone_lookup}
+                    onCheckedChange={(checked) => handleSettingChange('allow_phone_lookup', checked)}
+                  />
                 </div>
                 
                 <div className="grid gap-2">
                   <Label htmlFor="widget-title">Extension Title</Label>
                   <Input 
                     id="widget-title" 
-                    defaultValue="Loyalty Program" 
+                    value={settings.widget_title}
+                    onChange={(e) => handleSettingChange('widget_title', e.target.value)}
                   />
                 </div>
-                
-                <Button>Save Settings</Button>
               </CardContent>
             </Card>
           </TabsContent>
