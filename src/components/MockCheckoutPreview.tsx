@@ -16,6 +16,7 @@ const MockCheckoutPreview = () => {
   const [showRewards, setShowRewards] = useState(false);
   const [availableRewards, setAvailableRewards] = useState<any[]>([]);
   const [realProducts, setRealProducts] = useState<any[]>([]);
+  const [appliedDiscounts, setAppliedDiscounts] = useState<any[]>([]);
   const [cartItems, setCartItems] = useState([
     { id: 1, name: 'Apple Harvest Candle', price: 16.00, quantity: 1, image: '/api/placeholder/80/80' },
     { id: 2, name: 'Amber + Sandalwood Wax Melt', price: 8.00, quantity: 1, image: '/api/placeholder/80/80' },
@@ -102,7 +103,29 @@ const MockCheckoutPreview = () => {
     if (!loyaltyAccount) return;
     
     try {
-      // For demo purposes, simulate redemption
+      // Calculate discount amount based on reward type
+      let discountAmount = 0;
+      if (reward.discount_type === 'FIXED_AMOUNT') {
+        discountAmount = reward.discount_amount / 100; // Convert cents to dollars
+      } else if (reward.discount_type === 'PERCENTAGE') {
+        const subtotal = calculateSubtotal();
+        discountAmount = (subtotal * (reward.discount_amount || 0)) / 100;
+        if (reward.max_discount_amount) {
+          discountAmount = Math.min(discountAmount, reward.max_discount_amount / 100);
+        }
+      }
+
+      // Add the discount to applied discounts
+      const newDiscount = {
+        id: reward.id,
+        name: reward.name,
+        amount: discountAmount,
+        type: reward.discount_type
+      };
+      
+      setAppliedDiscounts(prev => [...prev, newDiscount]);
+      
+      // Update loyalty account balance
       setLoyaltyAccount({
         ...loyaltyAccount,
         balance: loyaltyAccount.balance - reward.points_required
@@ -110,7 +133,7 @@ const MockCheckoutPreview = () => {
       
       toast({
         title: "Reward Redeemed!",
-        description: `${reward.name} has been applied to your cart.`
+        description: `${reward.name} has been applied to your cart. You saved $${discountAmount.toFixed(2)}!`
       });
       
       // Update available rewards based on new balance
@@ -127,8 +150,18 @@ const MockCheckoutPreview = () => {
     }
   };
 
-  const calculateTotal = () => {
+  const calculateSubtotal = () => {
     return cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
+  };
+
+  const calculateDiscount = () => {
+    return appliedDiscounts.reduce((total, discount) => total + discount.amount, 0);
+  };
+
+  const calculateTotal = () => {
+    const subtotal = calculateSubtotal();
+    const discount = calculateDiscount();
+    return Math.max(0, subtotal - discount); // Ensure total doesn't go negative
   };
 
   return (
@@ -268,17 +301,34 @@ const MockCheckoutPreview = () => {
             </div>
 
             {/* Discount Section */}
-            <div className="border-t border-slate-600 pt-4 mb-4">
-              <div className="flex items-center justify-between cursor-pointer">
-                <span className="font-medium">DISCOUNT</span>
-                <span>+</span>
+            {appliedDiscounts.length > 0 && (
+              <div className="border-t border-slate-600 pt-4 mb-4">
+                <div className="space-y-2">
+                  <span className="font-medium text-green-400">Applied Discounts:</span>
+                  {appliedDiscounts.map((discount, index) => (
+                    <div key={index} className="flex justify-between text-sm">
+                      <span className="text-slate-300">{discount.name}</span>
+                      <span className="text-green-400">-${discount.amount.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Total */}
+            {/* Total Section */}
             <div className="space-y-2 mb-6">
-              <div className="flex justify-between">
-                <span>Estimated total</span>
+              <div className="flex justify-between text-sm">
+                <span>Subtotal</span>
+                <span>${calculateSubtotal().toFixed(2)} USD</span>
+              </div>
+              {appliedDiscounts.length > 0 && (
+                <div className="flex justify-between text-sm text-green-400">
+                  <span>Total Discounts</span>
+                  <span>-${calculateDiscount().toFixed(2)} USD</span>
+                </div>
+              )}
+              <div className="flex justify-between border-t border-slate-600 pt-2">
+                <span className="font-medium">Estimated total</span>
                 <span className="text-xl font-bold">${calculateTotal().toFixed(2)} USD</span>
               </div>
               <p className="text-xs text-slate-400">Taxes and shipping calculated at checkout.</p>
