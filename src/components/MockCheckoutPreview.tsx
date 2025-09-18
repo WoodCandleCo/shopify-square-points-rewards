@@ -1,48 +1,140 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ShoppingCart, Minus, Plus, Trash2, Gift } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 const MockCheckoutPreview = () => {
+  const { toast } = useToast();
   const [loyaltyAccount, setLoyaltyAccount] = useState<any>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showRewards, setShowRewards] = useState(false);
-  const [cartItems] = useState([
+  const [availableRewards, setAvailableRewards] = useState<any[]>([]);
+  const [realProducts, setRealProducts] = useState<any[]>([]);
+  const [cartItems, setCartItems] = useState([
     { id: 1, name: 'Apple Harvest Candle', price: 16.00, quantity: 1, image: '/api/placeholder/80/80' },
     { id: 2, name: 'Amber + Sandalwood Wax Melt', price: 8.00, quantity: 1, image: '/api/placeholder/80/80' },
     { id: 3, name: 'Amber + Sandalwood Candle', price: 12.00, quantity: 2, image: '/api/placeholder/80/80' },
   ]);
 
-  const mockRewards = [
-    { id: '1', name: '$5 Off', points_required: 500, discount_value: 5 },
-    { id: '2', name: '$10 Off', points_required: 1000, discount_value: 10 },
-    { id: '3', name: 'Free Shipping', points_required: 750, discount_value: 0 },
-  ];
+  // Load real products and rewards on component mount
+  useEffect(() => {
+    loadRealData();
+  }, []);
 
-  const connectLoyaltyAccount = () => {
+  const loadRealData = async () => {
+    try {
+      // Fetch real Shopify products
+      const { data: products } = await supabase.functions.invoke('get-shopify-products');
+      if (products?.success && products?.products?.length > 0) {
+        const shopifyProducts = products.products.slice(0, 3).map((product: any, index: number) => ({
+          id: index + 1,
+          name: product.title,
+          price: 16.00 - (index * 2), // Mock pricing
+          quantity: 1,
+          image: '/api/placeholder/80/80'
+        }));
+        setRealProducts(shopifyProducts);
+        setCartItems(shopifyProducts);
+      }
+
+      // Fetch real rewards
+      const { data: rewards } = await supabase
+        .from('loyalty_rewards')
+        .select('*')
+        .eq('is_active', true)
+        .order('points_required', { ascending: true });
+      
+      if (rewards) {
+        setAvailableRewards(rewards);
+      }
+    } catch (error) {
+      console.error('Error loading real data:', error);
+    }
+  };
+
+  const connectLoyaltyAccount = async () => {
     if (!phoneNumber) return;
     
     setIsLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoyaltyAccount({
-        id: 'mock_account',
-        balance: 1250,
-        lifetime_points: 3500
+    try {
+      // Use real loyalty lookup API
+      const response = await fetch('/api/loyalty.lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone_number: phoneNumber })
       });
+      
+      const data = await response.json();
+      
+      if (data.loyalty_account) {
+        setLoyaltyAccount(data.loyalty_account);
+        setAvailableRewards(data.available_rewards || []);
+        toast({
+          title: "Account Connected",
+          description: `Found loyalty account with ${data.loyalty_account.balance} points!`
+        });
+      } else {
+        toast({
+          title: "No Account Found",
+          description: "No loyalty account found with this phone number.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error connecting loyalty account:', error);
+      toast({
+        title: "Connection Error",
+        description: "Failed to connect loyalty account. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
-  const redeemReward = (reward: any) => {
-    if (loyaltyAccount) {
-      setLoyaltyAccount({
-        ...loyaltyAccount,
-        balance: loyaltyAccount.balance - reward.points_required
+  const redeemReward = async (reward: any) => {
+    if (!loyaltyAccount) return;
+    
+    try {
+      // Use real reward redemption API
+      const response = await fetch('/api/loyalty.redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          loyalty_account_id: loyaltyAccount.id,
+          reward_id: reward.id 
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setLoyaltyAccount({
+          ...loyaltyAccount,
+          balance: loyaltyAccount.balance - reward.points_required
+        });
+        toast({
+          title: "Reward Redeemed!",
+          description: `${reward.name} has been applied to your cart.`
+        });
+        
+        // Update available rewards
+        setAvailableRewards(prev => prev.filter(r => r.points_required <= (loyaltyAccount.balance - reward.points_required)));
+      } else {
+        throw new Error(data.error || 'Redemption failed');
+      }
+    } catch (error) {
+      console.error('Error redeeming reward:', error);
+      toast({
+        title: "Redemption Failed",
+        description: "Failed to redeem reward. Please try again.",
+        variant: "destructive"
       });
     }
   };
@@ -156,24 +248,30 @@ const MockCheckoutPreview = () => {
                       
                       <div className="space-y-2">
                         <p className="text-xs text-slate-300">Available Rewards:</p>
-                        {mockRewards
-                          .filter(reward => reward.points_required <= loyaltyAccount.balance)
-                          .map(reward => (
-                            <div key={reward.id} className="flex items-center justify-between p-2 bg-slate-600 rounded">
-                              <div>
-                                <p className="text-sm font-medium">{reward.name}</p>
-                                <p className="text-xs text-slate-400">{reward.points_required} points</p>
+                        {availableRewards.length > 0 ? (
+                          availableRewards
+                            .filter(reward => reward.points_required <= loyaltyAccount.balance)
+                            .map(reward => (
+                              <div key={reward.id} className="flex items-center justify-between p-2 bg-slate-600 rounded">
+                                <div>
+                                  <p className="text-sm font-medium">{reward.name}</p>
+                                  <p className="text-xs text-slate-400">{reward.points_required} points</p>
+                                  {reward.description && (
+                                    <p className="text-xs text-slate-400">{reward.description}</p>
+                                  )}
+                                </div>
+                                <Button
+                                  size="sm"
+                                  onClick={() => redeemReward(reward)}
+                                  className="h-6 text-xs px-2 bg-blue-600 hover:bg-blue-700"
+                                >
+                                  Redeem
+                                </Button>
                               </div>
-                              <Button
-                                size="sm"
-                                onClick={() => redeemReward(reward)}
-                                className="h-6 text-xs px-2 bg-blue-600 hover:bg-blue-700"
-                              >
-                                Redeem
-                              </Button>
-                            </div>
-                          ))
-                        }
+                            ))
+                        ) : (
+                          <p className="text-xs text-slate-400">No rewards available</p>
+                        )}
                       </div>
                     </div>
                   )}
