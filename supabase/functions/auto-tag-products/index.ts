@@ -14,6 +14,10 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Auto-tag function called!');
+    console.log('Request method:', req.method);
+    console.log('Request URL:', req.url);
+    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''

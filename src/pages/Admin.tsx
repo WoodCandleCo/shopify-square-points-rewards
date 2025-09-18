@@ -73,11 +73,18 @@ const AdminDashboard = () => {
   };
 
   const autoTagProducts = async () => {
+    console.log('Auto-tag button clicked!');
     setLoadingAutoTag(true);
     try {
+      console.log('Calling auto-tag-products function...');
       const { data, error } = await supabase.functions.invoke('auto-tag-products');
 
-      if (error) throw error;
+      console.log('Function response:', { data, error });
+
+      if (error) {
+        console.error('Function error:', error);
+        throw error;
+      }
 
       if (data?.success) {
         setTaggedProducts(data.results || []);
@@ -97,6 +104,28 @@ const AdminDashboard = () => {
       });
     } finally {
       setLoadingAutoTag(false);
+    }
+  };
+
+  const testShopifyConfig = async () => {
+    try {
+      console.log('Testing Shopify config...');
+      const { data, error } = await supabase.functions.invoke('test-shopify-config');
+      console.log('Test result:', { data, error });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Shopify Configuration Test",
+        description: `Store URL: ${data.store_url}, Token: ${data.has_access_token ? 'Present' : 'Missing'}`
+      });
+    } catch (error) {
+      console.error('Test failed:', error);
+      toast({
+        title: "Configuration test failed",
+        description: error.message,
+        variant: "destructive"
+      });
     }
   };
 
@@ -312,6 +341,13 @@ const AdminDashboard = () => {
               <CardContent>
                 <div className="space-y-6">
                   <div className="flex gap-4">
+                    <Button 
+                      onClick={testShopifyConfig} 
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Test Shopify Config
+                    </Button>
                     <Button 
                       onClick={autoTagProducts} 
                       disabled={loadingAutoTag}
