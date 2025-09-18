@@ -7,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Settings, Users, Gift, BarChart3, Square } from "lucide-react";
+import { Settings, Users, Gift, BarChart3, Square, Eye } from "lucide-react";
+import MockCheckoutPreview from "@/components/MockCheckoutPreview";
 
 const AdminDashboard = () => {
   return (
@@ -19,7 +20,7 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4" />
               Overview
@@ -35,6 +36,10 @@ const AdminDashboard = () => {
             <TabsTrigger value="customers" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
               Customers
+            </TabsTrigger>
+            <TabsTrigger value="preview" className="flex items-center gap-2">
+              <Eye className="w-4 h-4" />
+              Preview
             </TabsTrigger>
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
@@ -250,6 +255,54 @@ const AdminDashboard = () => {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="preview" className="mt-6">
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Checkout Extension Preview</CardTitle>
+                  <CardDescription>
+                    See exactly how your loyalty widget will appear in Shopify checkout
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <MockCheckoutPreview />
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader>
+                  <CardTitle>Preview Settings</CardTitle>
+                  <CardDescription>
+                    Customize how the preview appears
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">Customer Flow</p>
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p>1. Customer enters phone number</p>
+                      <p>2. System finds loyalty account via Square API</p>
+                      <p>3. Shows current points balance</p>
+                      <p>4. Displays available rewards</p>
+                      <p>5. Customer redeems points for discount</p>
+                      <p>6. Discount applies to cart total</p>
+                    </div>
+                  </div>
+                  
+                  <div className="p-4 bg-muted rounded-lg">
+                    <p className="text-sm font-medium mb-2">Integration Notes:</p>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                      <li>• Widget appears in Shopify Plus checkout</li>
+                      <li>• Real-time Square API integration</li>
+                      <li>• Automatic discount application</li>
+                      <li>• Mobile responsive design</li>
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="settings" className="mt-6">
