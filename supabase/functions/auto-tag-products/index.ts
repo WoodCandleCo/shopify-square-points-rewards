@@ -47,10 +47,12 @@ serve(async (req) => {
 
     console.log('Found mappings:', mappings.length);
 
-    // First, get ALL products from Shopify to analyze
-    console.log('Fetching all products from Shopify...');
+    // First, get ALL products and collections from Shopify to analyze
+    console.log('Fetching all products and collections from Shopify...');
+    
+    // Fetch products with more detailed info
     const allProductsResponse = await fetch(
-      `https://${shopifyStoreUrl}/admin/api/2024-10/products.json?limit=250`,
+      `https://${shopifyStoreUrl}/admin/api/2024-10/products.json?limit=250&fields=id,title,handle,product_type,vendor,tags,body_html,variants`,
       {
         headers: {
           'X-Shopify-Access-Token': shopifyAccessToken,
@@ -67,9 +69,30 @@ serve(async (req) => {
     const allProductsData = await allProductsResponse.json();
     const allProducts = allProductsData.products || [];
     
+    // Fetch collections
+    const collectionsResponse = await fetch(
+      `https://${shopifyStoreUrl}/admin/api/2024-10/collections.json`,
+      {
+        headers: {
+          'X-Shopify-Access-Token': shopifyAccessToken,
+          'Content-Type': 'application/json'
+        }
+      }
+    );
+
+    let collections = [];
+    if (collectionsResponse.ok) {
+      const collectionsData = await collectionsResponse.json();
+      collections = collectionsData.collections || [];
+      console.log('Found collections:', collections.map(c => c.title));
+    }
+    
     console.log(`Found ${allProducts.length} total products in store`);
     if (allProducts.length > 0) {
-      console.log('Sample product names:', allProducts.slice(0, 5).map(p => p.title));
+      console.log('Sample product info:');
+      allProducts.slice(0, 3).forEach(p => {
+        console.log(`- "${p.title}" | Type: ${p.product_type} | Vendor: ${p.vendor} | Tags: ${p.tags}`);
+      });
     }
 
     let taggedCount = 0;
@@ -79,38 +102,51 @@ serve(async (req) => {
       console.log(`Processing mapping for: ${mapping.product_name}`);
       
       try {
-        // Define search terms for each category
-        let keywords = [];
+        // Use smarter matching based on product categories and precise keywords
         const productName = mapping.product_name.toLowerCase();
+        let matchingProducts = [];
         
         if (productName.includes('match')) {
-          keywords = ['match'];
+          // Only match products with "match" in title (not description/tags)
+          matchingProducts = allProducts.filter(product => {
+            const title = product.title.toLowerCase();
+            return title.includes('match') && !title.includes('matching');
+          });
         } else if (productName.includes('wick trimmer')) {
-          keywords = ['wick', 'trimmer'];
-        } else if (productName.includes('candle')) {
-          keywords = ['candle'];
+          // Only match actual wick trimmer products
+          matchingProducts = allProducts.filter(product => {
+            const title = product.title.toLowerCase();
+            const productType = (product.product_type || '').toLowerCase();
+            return (title.includes('wick') && title.includes('trimmer')) || 
+                   productType.includes('wick trimmer') ||
+                   (title.includes('trimmer') && productType.includes('candle'));
+          });
+        } else if (productName.includes('7oz candle')) {
+          // Match candles, but exclude melts and other accessories
+          matchingProducts = allProducts.filter(product => {
+            const title = product.title.toLowerCase();
+            const productType = (product.product_type || '').toLowerCase();
+            return (title.includes('candle') || productType.includes('candle')) && 
+                   !title.includes('melt') && 
+                   !title.includes('trimmer') && 
+                   !title.includes('warmer');
+          });
         } else if (productName.includes('wax melt')) {
-          keywords = ['wax', 'melt'];
-        } else {
-          keywords = [productName];
+          // Only match wax melts and melt-related products
+          matchingProducts = allProducts.filter(product => {
+            const title = product.title.toLowerCase();
+            const productType = (product.product_type || '').toLowerCase();
+            return title.includes('melt') || 
+                   productType.includes('melt') ||
+                   title.includes('wax melt warmer');
+          });
         }
 
-        console.log(`Looking for products containing: ${keywords.join(' OR ')}`);
-
-        // Find matching products
-        const matchingProducts = allProducts.filter(product => {
-          const title = product.title.toLowerCase();
-          const description = (product.body_html || '').toLowerCase();
-          const tags = (product.tags || '').toLowerCase();
-          const vendor = (product.vendor || '').toLowerCase();
-          
-          const allText = `${title} ${description} ${tags} ${vendor}`;
-          
-          // For single keywords, just check if any keyword exists
-          return keywords.some(keyword => allText.includes(keyword));
-        });
-
         console.log(`Found ${matchingProducts.length} products for ${mapping.product_name}`);
+        
+        if (matchingProducts.length > 0) {
+          console.log('Matching products:', matchingProducts.slice(0, 3).map(p => `"${p.title}" (Type: ${p.product_type})`));
+        }
 
         // Tag matching products
         for (const product of matchingProducts) {
