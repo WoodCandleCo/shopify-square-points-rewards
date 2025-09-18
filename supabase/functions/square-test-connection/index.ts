@@ -32,7 +32,15 @@ serve(async (req) => {
       .eq('key', 'square_environment')
       .single()
 
-    const environment = settingData?.value || 'sandbox'
+    // Normalize environment value regardless of how it's stored
+    let environment: string = 'sandbox'
+    const raw = (settingData as any)?.value
+    if (typeof raw === 'string') {
+      try { environment = JSON.parse(raw) } catch { environment = raw }
+    } else if (raw != null) {
+      environment = String(raw)
+    }
+    environment = environment === 'production' ? 'production' : 'sandbox'
     
     // Use appropriate Square API URL based on environment
     const baseUrl = environment === 'production' 
