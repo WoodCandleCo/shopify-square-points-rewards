@@ -37,10 +37,12 @@ const MockCheckoutPreview: React.FC<MockCheckoutPreviewProps> = ({
   };
 
   const redeemReward = (reward: any) => {
-    setLoyaltyAccount(prev => ({
-      ...prev,
-      balance: prev.balance - reward.points_required
-    }));
+    if (loyaltyAccount) {
+      setLoyaltyAccount({
+        ...loyaltyAccount,
+        balance: loyaltyAccount.balance - reward.points_required
+      });
+    }
   };
 
   return (
@@ -69,7 +71,7 @@ const MockCheckoutPreview: React.FC<MockCheckoutPreviewProps> = ({
             <h4 className="font-medium text-gray-900">Loyalty Program</h4>
             
             {!loyaltyAccount ? (
-              <>
+              <div className="space-y-3">
                 <p className="text-sm text-gray-600">Enter your phone number to access your loyalty points</p>
                 <Input
                   placeholder="+1 (555) 123-4567"
@@ -85,9 +87,9 @@ const MockCheckoutPreview: React.FC<MockCheckoutPreviewProps> = ({
                 >
                   Connect Loyalty Account
                 </Button>
-              </>
+              </div>
             ) : (
-              <>
+              <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-xs font-medium text-gray-600">Current Balance</p>
@@ -140,7 +142,7 @@ const MockCheckoutPreview: React.FC<MockCheckoutPreviewProps> = ({
                     )}
                   </div>
                 )}
-              </>
+              </div>
             )}
           </div>
         </div>
