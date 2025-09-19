@@ -160,10 +160,24 @@ serve(async (req) => {
               shopifyProductId = matchingProducts[0].id?.toString()
               shopifyProductHandle = matchingProducts[0].handle
               
-              // Collect all product names for the applicable_product_names array
-              applicableProductNames = matchingProducts.map(p => p.title)
+              // Get SKU from first variant if available
+              if (matchingProducts[0].variants && matchingProducts[0].variants.length > 0) {
+                shopifySku = matchingProducts[0].variants[0].sku
+              }
               
-              console.log(`Mapped "${rewardName}" to ${matchingProducts.length} products: ${applicableProductNames.join(', ')}`)
+              // Collect all product details for the applicable_product_names array
+              applicableProductNames = matchingProducts.map(p => {
+                const variant = p.variants && p.variants.length > 0 ? p.variants[0] : null
+                return {
+                  title: p.title,
+                  handle: p.handle,
+                  id: p.id?.toString(),
+                  sku: variant?.sku || null,
+                  price: variant?.price || null
+                }
+              })
+              
+              console.log(`Mapped "${rewardName}" to ${matchingProducts.length} products: ${matchingProducts.map(p => p.title).join(', ')}`)
             }
           }
         }

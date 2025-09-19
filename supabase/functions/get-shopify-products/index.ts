@@ -29,9 +29,9 @@ serve(async (req) => {
 
     console.log('Using Shopify store URL:', shopifyStoreUrl);
 
-    // Fetch all products from Shopify
+    // Fetch all products from Shopify with variants for SKU and pricing
     const productsResponse = await fetch(
-      `https://${shopifyStoreUrl}/admin/api/2024-10/products.json?limit=250&fields=id,title,handle,tags`,
+      `https://${shopifyStoreUrl}/admin/api/2024-10/products.json?limit=250&fields=id,title,handle,tags,variants`,
       {
         headers: {
           'X-Shopify-Access-Token': shopifyAccessToken,
