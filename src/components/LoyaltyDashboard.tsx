@@ -26,6 +26,10 @@ interface LoyaltyReward {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  shopify_product_id: string | null;
+  shopify_product_handle: string | null;
+  shopify_sku: string | null;
+  applicable_product_names: string[] | null;
 }
 
 interface LoyaltyTransaction {
@@ -221,12 +225,31 @@ const LoyaltyDashboard = () => {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">
-                        {reward.discount_type === 'PERCENTAGE' 
-                          ? `${reward.discount_amount}% off`
-                          : `$${((reward.discount_amount || 0) / 100).toFixed(2)} off`
+                      <div className="text-sm text-muted-foreground">
+                        {reward.discount_type === 'PERCENTAGE' && reward.discount_amount === 100 
+                          ? (
+                            <div className="space-y-1">
+                              <p className="font-medium text-green-600">Free Item</p>
+                              {reward.applicable_product_names && reward.applicable_product_names.length > 0 && (
+                                <div className="text-xs">
+                                  <p className="font-medium">Applies to:</p>
+                                  <ul className="list-disc list-inside">
+                                    {reward.applicable_product_names.map((name, index) => (
+                                      <li key={index}>{name}</li>
+                                    ))}
+                                  </ul>
+                                </div>
+                              )}
+                              {reward.shopify_sku && (
+                                <p className="text-xs">SKU: {reward.shopify_sku}</p>
+                              )}
+                            </div>
+                          )
+                          : reward.discount_type === 'PERCENTAGE' 
+                            ? `${reward.discount_amount}% off`
+                            : `$${((reward.discount_amount || 0) / 100).toFixed(2)} off`
                         }
-                      </p>
+                      </div>
                       <Button 
                         onClick={() => handleRedeemReward(reward)}
                         disabled={loyaltyAccount.balance < reward.points_required}

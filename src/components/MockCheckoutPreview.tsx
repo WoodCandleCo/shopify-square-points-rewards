@@ -18,9 +18,33 @@ const MockCheckoutPreview = () => {
   const [realProducts, setRealProducts] = useState<any[]>([]);
   const [appliedDiscounts, setAppliedDiscounts] = useState<any[]>([]);
   const [cartItems, setCartItems] = useState([
-    { id: 1, name: 'Apple Harvest Candle', price: 16.00, quantity: 1, image: '/api/placeholder/80/80' },
-    { id: 2, name: 'Amber + Sandalwood Wax Melt', price: 8.00, quantity: 1, image: '/api/placeholder/80/80' },
-    { id: 3, name: 'Amber + Sandalwood Candle', price: 12.00, quantity: 2, image: '/api/placeholder/80/80' },
+    { 
+      id: 1, 
+      name: 'Apple Harvest Candle', 
+      price: 16.00, 
+      quantity: 1, 
+      image: '/api/placeholder/80/80',
+      shopify_product_id: null,
+      sku: null
+    },
+    { 
+      id: 2, 
+      name: 'Amber + Sandalwood Wax Melt', 
+      price: 8.00, 
+      quantity: 1, 
+      image: '/api/placeholder/80/80',
+      shopify_product_id: null,
+      sku: null
+    },
+    { 
+      id: 3, 
+      name: 'Amber + Sandalwood Candle', 
+      price: 12.00, 
+      quantity: 2, 
+      image: '/api/placeholder/80/80',
+      shopify_product_id: null,
+      sku: null
+    },
   ]);
 
   // Load real products and rewards on component mount
@@ -38,7 +62,9 @@ const MockCheckoutPreview = () => {
           name: product.title,
           price: 16.00 - (index * 2), // Mock pricing
           quantity: 1,
-          image: '/api/placeholder/80/80'
+          image: '/api/placeholder/80/80',
+          shopify_product_id: product.id,
+          sku: product.variants?.[0]?.sku || null
         }));
         setRealProducts(shopifyProducts);
         setCartItems(shopifyProducts);
@@ -133,7 +159,16 @@ const MockCheckoutPreview = () => {
           // Regular percentage discount
           let applicableItemsTotal = 0;
           
-          if (reward.scope === 'ITEM_VARIATION' && reward.applicable_product_ids) {
+          // Check if we should use Shopify product references instead of scope
+          if (reward.shopify_product_id || reward.shopify_sku) {
+            // Use Shopify product identifier to find applicable items
+            applicableItemsTotal = cartItems
+              .filter(item => 
+                (reward.shopify_product_id && item.shopify_product_id === reward.shopify_product_id) ||
+                (reward.shopify_sku && item.sku === reward.shopify_sku)
+              )
+              .reduce((total, item) => total + (item.price * item.quantity), 0);
+          } else if (reward.scope === 'ITEM_VARIATION' && reward.applicable_product_ids) {
             applicableItemsTotal = cartItems
               .filter(item => reward.applicable_product_ids.includes(item.id.toString()))
               .reduce((total, item) => total + (item.price * item.quantity), 0);

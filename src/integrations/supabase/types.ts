@@ -81,6 +81,7 @@ export type Database = {
       }
       loyalty_rewards: {
         Row: {
+          applicable_product_names: string[] | null
           created_at: string
           description: string | null
           discount_amount: number | null
@@ -90,10 +91,14 @@ export type Database = {
           max_discount_amount: number | null
           name: string
           points_required: number
+          shopify_product_handle: string | null
+          shopify_product_id: string | null
+          shopify_sku: string | null
           square_reward_id: string
           updated_at: string
         }
         Insert: {
+          applicable_product_names?: string[] | null
           created_at?: string
           description?: string | null
           discount_amount?: number | null
@@ -103,10 +108,14 @@ export type Database = {
           max_discount_amount?: number | null
           name: string
           points_required: number
+          shopify_product_handle?: string | null
+          shopify_product_id?: string | null
+          shopify_sku?: string | null
           square_reward_id: string
           updated_at?: string
         }
         Update: {
+          applicable_product_names?: string[] | null
           created_at?: string
           description?: string | null
           discount_amount?: number | null
@@ -116,6 +125,9 @@ export type Database = {
           max_discount_amount?: number | null
           name?: string
           points_required?: number
+          shopify_product_handle?: string | null
+          shopify_product_id?: string | null
+          shopify_sku?: string | null
           square_reward_id?: string
           updated_at?: string
         }
