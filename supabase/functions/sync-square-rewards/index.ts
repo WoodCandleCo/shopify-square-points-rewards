@@ -48,6 +48,16 @@ serve(async (req) => {
 
     console.log(`Syncing rewards from Square in ${environment} environment`)
 
+    // Get Shopify products for mapping
+    const shopifyResponse = await supabase.functions.invoke('get-shopify-products')
+    let shopifyProducts = []
+    if (shopifyResponse.data?.success) {
+      shopifyProducts = shopifyResponse.data.products || []
+      console.log(`Found ${shopifyProducts.length} Shopify products for mapping`)
+    } else {
+      console.warn('Could not fetch Shopify products for mapping:', shopifyResponse.error)
+    }
+
     // First, get the loyalty program ID
     const programsResponse = await fetch(`${baseUrl}/v2/loyalty/programs`, {
       method: 'GET',
@@ -120,6 +130,44 @@ serve(async (req) => {
 
         console.log(`Parsed discount for "${rewardName}": ${discountType} - ${discountAmount}${discountType === 'PERCENTAGE' ? '%' : ' cents'}, max: ${maxDiscountAmount}`)
 
+        // Map to Shopify products for free items
+        let shopifyProductId = null
+        let shopifyProductHandle = null
+        let shopifySku = null
+        let applicableProductNames = null
+
+        if (discountType === 'PERCENTAGE' && discountAmount === 100) {
+          // This is a free item, try to map it to Shopify products
+          const rewardNameLower = rewardName.toLowerCase()
+          
+          // Map common reward names to loyalty tags
+          const rewardMappings = {
+            'free matches': 'loyalty-matches',
+            'free wax melt': 'loyalty-wax-melt', 
+            'free wick trimmer': 'loyalty-wick-trimmer',
+            'free 7oz candle': 'loyalty-7oz-candle'
+          }
+          
+          const loyaltyTag = rewardMappings[rewardNameLower]
+          if (loyaltyTag) {
+            // Find matching products by tag
+            const matchingProducts = shopifyProducts.filter(product => 
+              product.tags && product.tags.toLowerCase().includes(loyaltyTag)
+            )
+            
+            if (matchingProducts.length > 0) {
+              // Use the first product as the primary reference
+              shopifyProductId = matchingProducts[0].id?.toString()
+              shopifyProductHandle = matchingProducts[0].handle
+              
+              // Collect all product names for the applicable_product_names array
+              applicableProductNames = matchingProducts.map(p => p.title)
+              
+              console.log(`Mapped "${rewardName}" to ${matchingProducts.length} products: ${applicableProductNames.join(', ')}`)
+            }
+          }
+        }
+
         const rewardData = {
           square_reward_id: reward.id,
           name: reward.name || `${reward.points} Points Reward`,
@@ -128,6 +176,10 @@ serve(async (req) => {
           discount_type: discountType,
           discount_amount: discountAmount,
           max_discount_amount: maxDiscountAmount,
+          shopify_product_id: shopifyProductId,
+          shopify_product_handle: shopifyProductHandle,
+          shopify_sku: shopifySku,
+          applicable_product_names: applicableProductNames,
           is_active: true
         }
 
