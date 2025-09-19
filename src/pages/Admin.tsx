@@ -241,13 +241,15 @@ const AdminDashboard = () => {
                       <TableHead>Points Required</TableHead>
                       <TableHead>Discount</TableHead>
                       <TableHead>Max Discount</TableHead>
+                      <TableHead>Shopify Product</TableHead>
+                      <TableHead>SKU</TableHead>
                       <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {rewards.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                           No rewards found. Click "Sync from Square" to load rewards.
                         </TableCell>
                       </TableRow>
@@ -258,6 +260,21 @@ const AdminDashboard = () => {
                           <TableCell>{reward.points_required}</TableCell>
                           <TableCell>{formatDiscount(reward)}</TableCell>
                           <TableCell>{formatMaxDiscount(reward)}</TableCell>
+                          <TableCell>
+                            {reward.applicable_product_names && reward.applicable_product_names.length > 0 ? (
+                              <div className="text-xs">
+                                {reward.applicable_product_names.slice(0, 2).join(', ')}
+                                {reward.applicable_product_names.length > 2 && ` +${reward.applicable_product_names.length - 2} more`}
+                              </div>
+                            ) : reward.shopify_product_id ? (
+                              <span className="text-xs text-muted-foreground">ID: {reward.shopify_product_id}</span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-xs">{reward.shopify_sku || '-'}</span>
+                          </TableCell>
                           <TableCell>
                             <Badge variant={reward.is_active ? "default" : "secondary"}>
                               {reward.is_active ? "Active" : "Inactive"}
