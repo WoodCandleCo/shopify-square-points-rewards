@@ -72,6 +72,31 @@ const AdminDashboard = () => {
     }
   };
 
+  const toggleRewardStatus = async (rewardId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('loyalty_rewards')
+        .update({ is_active: !currentStatus })
+        .eq('id', rewardId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Reward updated",
+        description: `Reward ${!currentStatus ? 'activated' : 'deactivated'} successfully.`
+      });
+      
+      loadRewards(); // Reload the rewards table
+    } catch (error) {
+      console.error('Error updating reward:', error);
+      toast({
+        title: "Update failed",
+        description: "Could not update reward status.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleTestConnection = async () => {
     await testSquareConnection();
   };
@@ -245,13 +270,14 @@ const AdminDashboard = () => {
                       <TableHead>Shopify Product</TableHead>
                       <TableHead>SKU</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {rewards.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                          No rewards found. Click "Sync from Square" to load rewards.
+                        <TableRow>
+                          <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                            No rewards found. Click "Sync from Square" to load rewards.
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -277,6 +303,15 @@ const AdminDashboard = () => {
                             <Badge variant={reward.is_active ? "default" : "secondary"}>
                               {reward.is_active ? "Active" : "Inactive"}
                             </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant={reward.is_active ? "destructive" : "default"}
+                              size="sm"
+                              onClick={() => toggleRewardStatus(reward.id, reward.is_active)}
+                            >
+                              {reward.is_active ? "Deactivate" : "Activate"}
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))
