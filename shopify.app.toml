@@ -3,7 +3,7 @@
 
 name = "CheckoutLoyalty"
 client_id = "your_client_id_here"
-application_url = "https://your-app-url.com"
+application_url = "https://your-deployed-project.lovableproject.com"
 embedded = true
 
 [access_scopes]
@@ -11,8 +11,8 @@ scopes = "write_products,read_customers,write_customers,read_orders,write_orders
 
 [auth]
 redirect_urls = [
-  "https://your-app-url.com/auth/shopify/callback",
-  "https://your-app-url.com/auth/tokens"
+  "https://your-deployed-project.lovableproject.com/auth/shopify/callback",
+  "https://your-deployed-project.lovableproject.com/auth/tokens"
 ]
 
 [webhooks]
@@ -23,7 +23,7 @@ embedded = false
 
 [build]
 automatically_update_urls_on_dev = true
-dev_store_url = "your-dev-store.myshopify.com"
+dev_store_url = "shop.woodcandleco.com"
 
 [[app_extensions]]
 name = "loyalty-cart"
