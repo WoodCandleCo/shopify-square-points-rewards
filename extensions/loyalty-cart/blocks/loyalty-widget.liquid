@@ -23,9 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
-
-<div id="loyalty-widget-template" style="display: none;" class="loyalty-widget">
-  <style>
+<style>
     .loyalty-widget {
       background: var(--color-background, #ffffff);
       border-radius: 8px;
@@ -92,8 +90,52 @@ document.addEventListener('DOMContentLoaded', function() {
       padding: 10px;
       cursor: pointer;
     }
-  </style>
-</div>
+</style>
+
+<template id="loyalty-widget-template">
+  <div class="loyalty-header" onclick="toggleLoyalty()">
+    <span>🎁 Loyalty Rewards</span>
+    <span id="loyalty-toggle">+</span>
+  </div>
+
+  <div id="loyalty-content" class="loyalty-content">
+    <div id="loyalty-loading" style="display: none;">
+      Loading loyalty account...
+    </div>
+
+    <div id="loyalty-login" style="display: block;">
+      <p style="margin-bottom: 8px; color: #6c757d; font-size: 14px;">
+        Enter your phone number to access rewards
+      </p>
+      <input 
+        type="tel" 
+        id="phone-input" 
+        class="phone-input" 
+        placeholder="+1 (555) 123-4567"
+      >
+      <button class="connect-button" onclick="connectLoyalty()">
+        Connect Loyalty Account
+      </button>
+    </div>
+
+    <div id="loyalty-account" style="display: none;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div>
+          <p style="font-size: 12px; color: #6c757d; margin: 0;">Current Balance</p>
+          <p id="current-balance" class="loyalty-balance" style="margin: 0;">0 points</p>
+        </div>
+        <div>
+          <p style="font-size: 12px; color: #6c757d; margin: 0;">Lifetime Points</p>
+          <p id="lifetime-points" style="margin: 0; font-weight: 600;">0 points</p>
+        </div>
+      </div>
+
+      <div id="available-rewards" class="loyalty-rewards">
+        <!-- Rewards will be populated here -->
+      </div>
+    </div>
+  </div>
+</template>
 
 <script>
   let loyaltyExpanded = false;
@@ -105,51 +147,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (!widget) return;
     
     // Set the widget HTML content
-    widget.innerHTML = {% raw %}`
-      <div class="loyalty-header" onclick="toggleLoyalty()">
-        <span>🎁 Loyalty Rewards</span>
-        <span id="loyalty-toggle">+</span>
-      </div>
-
-      <div id="loyalty-content" class="loyalty-content">
-        <div id="loyalty-loading" style="display: none;">
-          Loading loyalty account...
-        </div>
-
-        <div id="loyalty-login" style="display: block;">
-          <p style="margin-bottom: 8px; color: #6c757d; font-size: 14px;">
-            Enter your phone number to access rewards
-          </p>
-          <input 
-            type="tel" 
-            id="phone-input" 
-            class="phone-input" 
-            placeholder="+1 (555) 123-4567"
-          >
-          <button class="connect-button" onclick="connectLoyalty()">
-            Connect Loyalty Account
-          </button>
-        </div>
-
-        <div id="loyalty-account" style="display: none;">
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-            <div>
-              <p style="font-size: 12px; color: #6c757d; margin: 0;">Current Balance</p>
-              <p id="current-balance" class="loyalty-balance" style="margin: 0;">0 points</p>
-            </div>
-            <div>
-              <p style="font-size: 12px; color: #6c757d; margin: 0;">Lifetime Points</p>
-              <p id="lifetime-points" style="margin: 0; font-weight: 600;">0 points</p>
-            </div>
-          </div>
-
-          <div id="available-rewards" class="loyalty-rewards">
-            <!-- Rewards will be populated here -->
-          </div>
-        </div>
-      </div>
-    `{% endraw %};
-  }
+    const tpl = document.getElementById('loyalty-widget-template');
+    if (tpl) {
+      widget.innerHTML = tpl.innerHTML;
+    }
 
   function toggleLoyalty() {
     const content = document.getElementById('loyalty-content');
@@ -225,7 +226,7 @@ document.addEventListener('DOMContentLoaded', function() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          phone_number: phoneNumber
+          phone: phoneNumber
         })
       });
 
@@ -351,15 +352,24 @@ document.addEventListener('DOMContentLoaded', function() {
         description += ` ($${(reward.discount_amount / 100).toFixed(2)} off)`;
       }
       
-      rewardDiv.innerHTML = {% raw %}`
-        <div>
-          <p style="margin: 0; font-weight: 500;">${description}</p>
-          <p style="margin: 0; font-size: 12px; color: #6c757d;">${reward.points_required} points</p>
-        </div>
-        <button class="reward-button" onclick="redeemReward('${reward.id}', ${reward.points_required})">
-          Redeem
-        </button>
-      `{% endraw %};
+      const left = document.createElement('div');
+      const title = document.createElement('p');
+      title.style.margin = '0';
+      title.style.fontWeight = '500';
+      title.textContent = description;
+      const pts = document.createElement('p');
+      pts.style.margin = '0';
+      pts.style.fontSize = '12px';
+      pts.style.color = '#6c757d';
+      pts.textContent = reward.points_required + ' points';
+      left.appendChild(title);
+      left.appendChild(pts);
+      const btn = document.createElement('button');
+      btn.className = 'reward-button';
+      btn.textContent = 'Redeem';
+      btn.addEventListener('click', () => redeemReward(reward.id, reward.points_required));
+      rewardDiv.appendChild(left);
+      rewardDiv.appendChild(btn);
       rewardsContainer.appendChild(rewardDiv);
     });
   }
