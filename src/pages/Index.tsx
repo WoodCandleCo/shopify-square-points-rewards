@@ -20,6 +20,9 @@ const Index = () => {
               <Settings className="w-4 h-4 mr-2" />
               Admin Dashboard
             </Button>
+            <Button onClick={() => navigate('/auth')} variant="outline">
+              Sign In
+            </Button>
           </div>
           
           <div className="grid gap-6 md:grid-cols-3 max-w-3xl mx-auto mt-12">

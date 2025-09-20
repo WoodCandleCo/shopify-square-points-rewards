@@ -231,6 +231,7 @@ export type Database = {
           id: string
           last_name: string | null
           phone: string | null
+          role: string | null
           shopify_customer_id: string | null
           square_customer_id: string | null
           updated_at: string
@@ -243,6 +244,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           phone?: string | null
+          role?: string | null
           shopify_customer_id?: string | null
           square_customer_id?: string | null
           updated_at?: string
@@ -255,6 +257,7 @@ export type Database = {
           id?: string
           last_name?: string | null
           phone?: string | null
+          role?: string | null
           shopify_customer_id?: string | null
           square_customer_id?: string | null
           updated_at?: string
@@ -267,7 +270,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_current_user_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      promote_user_to_admin: {
+        Args: { user_email: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never
