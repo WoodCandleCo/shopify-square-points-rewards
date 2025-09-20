@@ -1,3 +1,10 @@
 name = "loyalty-cart"
-type = "theme"
-handle = "loyalty-cart"
+type = "theme_app_extension"
+
+[extensions.settings]
+[[extensions.settings.fields]]
+key = "square_app_id"
+type = "single_line_text_field"
+name = "Lovable Project Domain"
+description = "Your Lovable project domain (e.g., your-project-name)"
+default = "shopify-square-points-rewards"
