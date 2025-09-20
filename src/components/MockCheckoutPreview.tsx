@@ -229,6 +229,39 @@ const MockCheckoutPreview = () => {
     return appliedDiscounts.reduce((total, discount) => total + discount.amount, 0);
   };
 
+  const removeDiscount = (discountId: string) => {
+    const discountToRemove = appliedDiscounts.find(d => d.id === discountId);
+    if (!discountToRemove || !loyaltyAccount) return;
+
+    // Find the original reward to get points back
+    const originalReward = availableRewards.find(r => r.id === discountId);
+    if (!originalReward) return;
+
+    // Remove the discount
+    setAppliedDiscounts(prev => prev.filter(d => d.id !== discountId));
+    
+    // Restore loyalty points
+    setLoyaltyAccount({
+      ...loyaltyAccount,
+      balance: loyaltyAccount.balance + originalReward.points_required
+    });
+
+    // Re-add the reward to available rewards if it's now affordable
+    setAvailableRewards(prev => {
+      const updated = [...prev];
+      if (!updated.find(r => r.id === originalReward.id)) {
+        updated.push(originalReward);
+        updated.sort((a, b) => a.points_required - b.points_required);
+      }
+      return updated;
+    });
+
+    toast({
+      title: "Reward Removed",
+      description: `${originalReward.name} removed. ${originalReward.points_required} points restored.`
+    });
+  };
+
   const calculateTotal = () => {
     const subtotal = calculateSubtotal();
     const discount = calculateDiscount();
@@ -377,9 +410,19 @@ const MockCheckoutPreview = () => {
                 <div className="space-y-2">
                   <span className="font-medium text-green-400">Applied Discounts:</span>
                   {appliedDiscounts.map((discount, index) => (
-                    <div key={index} className="flex justify-between text-sm">
-                      <span className="text-slate-300">{discount.name}</span>
-                      <span className="text-green-400">-${discount.amount.toFixed(2)}</span>
+                    <div key={index} className="flex justify-between items-center text-sm bg-slate-600 p-2 rounded">
+                      <div>
+                        <span className="text-slate-300">{discount.name}</span>
+                        <span className="text-green-400 ml-2">-${discount.amount.toFixed(2)}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeDiscount(discount.id)}
+                        className="h-6 w-6 p-0 text-slate-400 hover:text-white hover:bg-slate-500"
+                      >
+                        ✕
+                      </Button>
                     </div>
                   ))}
                 </div>
