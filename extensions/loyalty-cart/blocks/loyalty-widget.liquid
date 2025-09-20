@@ -364,3 +364,18 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 </script>
+
+{% schema %}
+{
+  "name": "Loyalty Program Widget",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "square_app_id",
+      "label": "Lovable Project Domain",
+      "default": "shopify-square-points-rewards"
+    }
+  ]
+}
+{% endschema %}

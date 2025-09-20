@@ -1,15 +1,3 @@
 name = "loyalty-cart"
-type = "theme_app_extension"
-
-[extensions.settings]
-[[extensions.settings.fields]]
-key = "square_app_id"
-type = "single_line_text_field"
-name = "Lovable Project Domain"
-description = "Your Lovable project domain (e.g., your-project-name)"
-
-[[extensions.settings.fields]]
-key = "square_access_token"
-type = "single_line_text_field"
-name = "Square Access Token"
-description = "Your Square Access Token (configured in Lovable project secrets)"
+type = "theme"
+handle = "loyalty-cart"
