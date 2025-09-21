@@ -1,3 +1,6 @@
 name = "loyalty-embed"
 type = "theme_app_extension"
 handle = "loyalty-embed"
+
+[extension_points]
+[[extension_points.metafields]]
