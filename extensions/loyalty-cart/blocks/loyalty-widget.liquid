@@ -7,12 +7,11 @@
 // Auto-inject loyalty widget into cart summary
 document.addEventListener('DOMContentLoaded', function() {
   console.log('Loyalty widget script loaded');
-  
-  // Try multiple selectors to find cart container
-  const selectors = [
+
+  const containerSelectors = [
     '.cart-actions',
     '.cart__summary-totals .cart-actions',
-    '.cart__footer', 
+    '.cart__footer',
     '.cart-footer',
     '.cart__totals',
     '.cart-totals',
@@ -24,38 +23,109 @@ document.addEventListener('DOMContentLoaded', function() {
     '.drawer__content',
     '[data-cart-drawer]',
     '.mini-cart',
+    '.mini-cart__content',
+    '.ajaxcart__inner',
     '.cart-items'
   ];
-  
-  let cartContainer = null;
-  for (const selector of selectors) {
-    const element = document.querySelector(selector);
-    console.log(`Checking selector: ${selector}`, element);
-    if (element) {
-      cartContainer = element;
-      console.log(`Found cart container with: ${selector}`);
-      break;
+
+  const anchorSelectors = [
+    '.cart__footer',
+    '.cart-footer',
+    '.cart-drawer__footer',
+    '.mini-cart__footer',
+    '.drawer__footer',
+    '.totals',
+    '.cart__blocks'
+  ];
+
+  function findCartContainer() {
+    for (const selector of containerSelectors) {
+      const el = document.querySelector(selector);
+      if (el) {
+        console.log(`Found cart container with: ${selector}`);
+        return el;
+      }
+    }
+    return null;
+  }
+
+  function insertWidget(container) {
+    try {
+      if (!container) return false;
+
+      let widget = document.getElementById('loyalty-widget');
+      if (!widget) {
+        widget = document.createElement('div');
+        widget.id = 'loyalty-widget';
+        widget.className = 'loyalty-widget';
+      }
+
+      // Prefer inserting before footer/checkout area inside the container
+      let anchor = null;
+      for (const sel of anchorSelectors) {
+        const el = container.querySelector(sel);
+        if (el) { anchor = el; break; }
+      }
+
+      if (anchor && anchor.parentNode) {
+        anchor.parentNode.insertBefore(widget, anchor);
+      } else {
+        container.insertBefore(widget, container.firstChild);
+      }
+
+      if (!widget.dataset.initialized) {
+        setTimeout(() => { try { initializeLoyaltyWidget(); } catch (e) { console.warn('init error', e); } }, 120);
+        widget.dataset.initialized = 'true';
+      }
+
+      console.log('Loyalty widget inserted');
+      return true;
+    } catch (e) {
+      console.error('Failed to insert loyalty widget', e);
+      return false;
     }
   }
-  
-  if (cartContainer) {
-    // Create the loyalty widget
-    const loyaltyWidget = document.createElement('div');
-    loyaltyWidget.id = 'loyalty-widget';
-    loyaltyWidget.className = 'loyalty-widget';
-    
-    // Insert at the beginning of the cart container
-    cartContainer.insertBefore(loyaltyWidget, cartContainer.firstChild);
-    console.log('Loyalty widget inserted into cart');
-    
-    // Initialize the widget content after a short delay
-    setTimeout(() => {
-      initializeLoyaltyWidget();
-    }, 100);
-  } else {
-    console.error('No cart container found for loyalty widget');
-    console.log('Available elements:', document.querySelectorAll('*[class*="cart"]'));
+
+  function tryInject() {
+    const container = findCartContainer();
+    if (container) {
+      return insertWidget(container);
+    }
+    return false;
   }
+
+  // Initial attempt
+  let injected = tryInject();
+
+  // Retry a few times to handle lazy/drawer renders
+  let attempts = 0;
+  const maxAttempts = 20; // ~10s
+  const interval = setInterval(() => {
+    if (injected || attempts >= maxAttempts) {
+      clearInterval(interval);
+      return;
+    }
+    attempts++;
+    injected = tryInject();
+  }, 500);
+
+  // Observe DOM changes for drawers/ajax carts
+  const observer = new MutationObserver((mutations) => {
+    for (const m of mutations) {
+      if (m.addedNodes && m.addedNodes.length) {
+        const addedEls = Array.from(m.addedNodes).filter(n => n instanceof HTMLElement);
+        if (addedEls.some(el => containerSelectors.some(sel => el.matches?.(sel) || el.querySelector?.(sel)))) {
+          setTimeout(tryInject, 50);
+        }
+      }
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // Listen for common theme cart events
+  ;['cart:updated','cart:refresh','cart:change','cart-drawer:open','ajaxCart.afterCartLoad'].forEach(evt => {
+    document.addEventListener(evt, () => setTimeout(tryInject, 80));
+  });
 });
 </script>
 <style>
