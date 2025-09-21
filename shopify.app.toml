@@ -24,7 +24,3 @@ embedded = false
 [build]
 automatically_update_urls_on_dev = true
 dev_store_url = "shop.woodcandleco.com"
-
-[[app_extensions]]
-name = "loyalty-cart"
-handle = "loyalty-cart"

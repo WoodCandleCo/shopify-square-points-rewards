@@ -23,6 +23,3 @@ redirect_urls = [
 ]
 
 # Extension configuration
-[[app_extensions]]
-name = "loyalty-cart"
-handle = "loyalty-cart"
