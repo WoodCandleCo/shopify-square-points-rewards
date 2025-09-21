@@ -6,23 +6,36 @@
 <script>
 // Auto-inject loyalty widget into cart summary
 document.addEventListener('DOMContentLoaded', function() {
+  console.log('Loyalty widget script loaded');
+  
   // Try multiple selectors to find cart container
   const selectors = [
     '.cart-actions',
     '.cart__summary-totals .cart-actions',
-    '.cart__footer',
+    '.cart__footer', 
     '.cart-footer',
     '.cart__totals',
     '.cart-totals',
     '.cart__summary',
     '[data-cart-summary]',
-    '.cart'
+    '.cart',
+    '.cart-drawer',
+    '.cart-drawer__content',
+    '.drawer__content',
+    '[data-cart-drawer]',
+    '.mini-cart',
+    '.cart-items'
   ];
   
   let cartContainer = null;
   for (const selector of selectors) {
-    cartContainer = document.querySelector(selector);
-    if (cartContainer) break;
+    const element = document.querySelector(selector);
+    console.log(`Checking selector: ${selector}`, element);
+    if (element) {
+      cartContainer = element;
+      console.log(`Found cart container with: ${selector}`);
+      break;
+    }
   }
   
   if (cartContainer) {
@@ -33,11 +46,15 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Insert at the beginning of the cart container
     cartContainer.insertBefore(loyaltyWidget, cartContainer.firstChild);
+    console.log('Loyalty widget inserted into cart');
     
     // Initialize the widget content after a short delay
     setTimeout(() => {
       initializeLoyaltyWidget();
     }, 100);
+  } else {
+    console.error('No cart container found for loyalty widget');
+    console.log('Available elements:', document.querySelectorAll('*[class*="cart"]'));
   }
 });
 </script>
