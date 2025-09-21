@@ -6,20 +6,38 @@
 <script>
 // Auto-inject loyalty widget into cart summary
 document.addEventListener('DOMContentLoaded', function() {
-  // Find the cart actions container (contains special instructions and discounts)
-  const cartActions = document.querySelector('.cart-actions, .cart__summary-totals .cart-actions');
+  // Try multiple selectors to find cart container
+  const selectors = [
+    '.cart-actions',
+    '.cart__summary-totals .cart-actions',
+    '.cart__footer',
+    '.cart-footer',
+    '.cart__totals',
+    '.cart-totals',
+    '.cart__summary',
+    '[data-cart-summary]',
+    '.cart'
+  ];
   
-  if (cartActions) {
+  let cartContainer = null;
+  for (const selector of selectors) {
+    cartContainer = document.querySelector(selector);
+    if (cartContainer) break;
+  }
+  
+  if (cartContainer) {
     // Create the loyalty widget
     const loyaltyWidget = document.createElement('div');
     loyaltyWidget.id = 'loyalty-widget';
     loyaltyWidget.className = 'loyalty-widget';
     
-    // Insert before cart actions
-    cartActions.parentNode.insertBefore(loyaltyWidget, cartActions);
+    // Insert at the beginning of the cart container
+    cartContainer.insertBefore(loyaltyWidget, cartContainer.firstChild);
     
-    // Initialize the widget content
-    initializeLoyaltyWidget();
+    // Initialize the widget content after a short delay
+    setTimeout(() => {
+      initializeLoyaltyWidget();
+    }, 100);
   }
 });
 </script>
@@ -151,6 +169,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (tpl) {
       widget.innerHTML = tpl.innerHTML;
     }
+  }
 
   function toggleLoyalty() {
     const content = document.getElementById('loyalty-content');
