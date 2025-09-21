@@ -1,0 +1,3 @@
+name = "loyalty-embed"
+type = "theme_app_extension"
+handle = "loyalty-embed"

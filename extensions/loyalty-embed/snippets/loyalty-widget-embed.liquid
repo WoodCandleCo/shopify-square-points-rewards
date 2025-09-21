@@ -1,0 +1,277 @@
+{% comment %}
+  Loyalty Widget App Embed - Injects loyalty functionality site-wide
+{% endcomment %}
+
+<script>
+// Auto-inject loyalty widget into cart areas
+(function() {
+  'use strict';
+  
+  const CONFIG = {
+    domain: '{{ settings.domain }}' || 'https://d2b10059-cd1b-49b3-b52e-e46e3944e1ab.lovableproject.com'
+  };
+
+  const containerSelectors = [
+    '.cart-actions',
+    '.cart__summary-totals .cart-actions',
+    '.cart__footer',
+    '.cart-footer',
+    '.cart__totals',
+    '.cart-totals',
+    '.cart-drawer__footer',
+    '.cart-drawer',
+    '.drawer--cart',
+    '.cart-drawer__content',
+    '.drawer__content',
+    '[data-cart-drawer]',
+    '.mini-cart',
+    '.mini-cart__content',
+    '.ajaxcart__inner',
+    '.cart-items'
+  ];
+
+  const anchorSelectors = [
+    '.cart__footer',
+    '.cart-footer',
+    '.cart-drawer__footer',
+    '.mini-cart__footer',
+    '.drawer__footer',
+    '.totals',
+    '.cart__blocks'
+  ];
+
+  function findCartContainer() {
+    for (const selector of containerSelectors) {
+      const el = document.querySelector(selector);
+      if (el) {
+        console.log(`Found cart container with: ${selector}`);
+        return el;
+      }
+    }
+    return null;
+  }
+
+  function insertWidget(container) {
+    try {
+      if (!container) return false;
+
+      let widget = document.getElementById('loyalty-widget');
+      if (!widget) {
+        widget = document.createElement('div');
+        widget.id = 'loyalty-widget';
+        widget.className = 'loyalty-widget';
+      }
+
+      // Prefer inserting before footer/checkout area inside the container
+      let anchor = null;
+      for (const sel of anchorSelectors) {
+        const el = container.querySelector(sel);
+        if (el) { anchor = el; break; }
+      }
+
+      if (anchor && anchor.parentNode) {
+        anchor.parentNode.insertBefore(widget, anchor);
+      } else {
+        container.insertBefore(widget, container.firstChild);
+      }
+
+      if (!widget.dataset.initialized) {
+        setTimeout(() => { 
+          try { 
+            initializeLoyaltyWidget(); 
+          } catch (e) { 
+            console.warn('Loyalty widget init error', e); 
+          } 
+        }, 120);
+        widget.dataset.initialized = 'true';
+      }
+
+      console.log('Loyalty widget embedded');
+      return true;
+    } catch (e) {
+      console.error('Failed to embed loyalty widget', e);
+      return false;
+    }
+  }
+
+  function tryInject() {
+    const container = findCartContainer();
+    if (container) {
+      return insertWidget(container);
+    }
+    return false;
+  }
+
+  function init() {
+    console.log('Loyalty widget embed loaded');
+    
+    // Initial attempt
+    let injected = tryInject();
+
+    // Retry for dynamic content
+    let attempts = 0;
+    const maxAttempts = 20;
+    const interval = setInterval(() => {
+      if (injected || attempts >= maxAttempts) {
+        clearInterval(interval);
+        return;
+      }
+      attempts++;
+      injected = tryInject();
+    }, 500);
+
+    // Observe DOM changes
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        if (m.addedNodes && m.addedNodes.length) {
+          const addedEls = Array.from(m.addedNodes).filter(n => n instanceof HTMLElement);
+          if (addedEls.some(el => containerSelectors.some(sel => el.matches?.(sel) || el.querySelector?.(sel)))) {
+            setTimeout(tryInject, 50);
+          }
+        }
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Listen for cart events
+    ['cart:updated','cart:refresh','cart:change','cart-drawer:open','ajaxCart.afterCartLoad'].forEach(evt => {
+      document.addEventListener(evt, () => setTimeout(tryInject, 80));
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+
+  // Load widget functionality
+  const widgetScript = document.createElement('script');
+  widgetScript.src = CONFIG.domain + '/loyalty-widget.js';
+  document.head.appendChild(widgetScript);
+
+})();
+</script>
+
+<style>
+.loyalty-widget {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.loyalty-widget__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+
+.loyalty-widget__title {
+  font-weight: 600;
+  font-size: 16px;
+  color: #333;
+  margin: 0;
+}
+
+.loyalty-widget__content {
+  display: none;
+}
+
+.loyalty-widget__content.open {
+  display: block;
+}
+
+.loyalty-widget__balance {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 12px;
+  border-radius: 6px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.loyalty-widget__input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  font-size: 14px;
+}
+
+.loyalty-widget__button {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  width: 100%;
+  margin-bottom: 8px;
+  transition: background-color 0.2s;
+}
+
+.loyalty-widget__button:hover {
+  background: #0056b3;
+}
+
+.loyalty-widget__button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.loyalty-widget__reward {
+  padding: 8px 12px;
+  border: 1px solid #28a745;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  background: #f8fff9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.loyalty-widget__reward-text {
+  font-size: 14px;
+  color: #333;
+}
+
+.loyalty-widget__redeem-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 3px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.loyalty-widget__loading {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+</style>
+
+{% schema %}
+{
+  "name": "Loyalty Program Widget",
+  "target": "head",
+  "settings": [
+    {
+      "type": "text",
+      "id": "domain",
+      "label": "Lovable Project Domain",
+      "default": "https://d2b10059-cd1b-49b3-b52e-e46e3944e1ab.lovableproject.com",
+      "info": "Your Lovable app domain"
+    }
+  ]
+}
+{% endschema %}
