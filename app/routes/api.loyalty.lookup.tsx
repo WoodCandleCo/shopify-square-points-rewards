@@ -2,16 +2,36 @@ import { json } from "@remix-run/node";
 import type { ActionFunction } from "@remix-run/node";
 import { supabase } from "~/integrations/supabase/client";
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 export const action: ActionFunction = async ({ request }) => {
+  // Handle CORS preflight requests
+  if (request.method === "OPTIONS") {
+    return new Response(null, { 
+      status: 200,
+      headers: corsHeaders 
+    });
+  }
+
   if (request.method !== "POST") {
-    return json({ error: "Method not allowed" }, { status: 405 });
+    return json({ error: "Method not allowed" }, { 
+      status: 405,
+      headers: corsHeaders 
+    });
   }
 
   try {
     const { phone, customer_id, email } = await request.json();
 
     if (!phone) {
-      return json({ error: "Phone number required" }, { status: 400 });
+      return json({ error: "Phone number required" }, { 
+        status: 400,
+        headers: corsHeaders 
+      });
     }
 
     // Call Square API to find loyalty account by phone
@@ -34,13 +54,19 @@ export const action: ActionFunction = async ({ request }) => {
     });
 
     if (!squareResponse.ok) {
-      return json({ error: "Failed to find loyalty account" }, { status: 404 });
+      return json({ error: "Failed to find loyalty account" }, { 
+        status: 404,
+        headers: corsHeaders 
+      });
     }
 
     const squareData = await squareResponse.json();
     
     if (!squareData.loyalty_accounts || squareData.loyalty_accounts.length === 0) {
-      return json({ error: "No loyalty account found for this phone number" }, { status: 404 });
+      return json({ error: "No loyalty account found for this phone number" }, { 
+        status: 404,
+        headers: corsHeaders 
+      });
     }
 
     const squareLoyaltyAccount = squareData.loyalty_accounts[0];
@@ -59,7 +85,10 @@ export const action: ActionFunction = async ({ request }) => {
 
     if (profileError) {
       console.error('Profile error:', profileError);
-      return json({ error: "Failed to create profile" }, { status: 500 });
+      return json({ error: "Failed to create profile" }, { 
+        status: 500,
+        headers: corsHeaders 
+      });
     }
 
     // Create or update loyalty account
@@ -77,7 +106,10 @@ export const action: ActionFunction = async ({ request }) => {
 
     if (loyaltyError) {
       console.error('Loyalty account error:', loyaltyError);
-      return json({ error: "Failed to create loyalty account" }, { status: 500 });
+      return json({ error: "Failed to create loyalty account" }, { 
+        status: 500,
+        headers: corsHeaders 
+      });
     }
 
     // Get available rewards
@@ -91,10 +123,15 @@ export const action: ActionFunction = async ({ request }) => {
     return json({
       loyalty_account: loyaltyAccount,
       available_rewards: rewards || []
+    }, {
+      headers: corsHeaders
     });
 
   } catch (error) {
     console.error('Error looking up loyalty account:', error);
-    return json({ error: "Internal server error" }, { status: 500 });
+    return json({ error: "Internal server error" }, { 
+      status: 500,
+      headers: corsHeaders 
+    });
   }
 };

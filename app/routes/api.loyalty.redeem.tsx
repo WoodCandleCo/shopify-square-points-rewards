@@ -2,16 +2,36 @@ import { json } from "@remix-run/node";
 import type { ActionFunction } from "@remix-run/node";
 import { supabase } from "~/integrations/supabase/client";
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 export const action: ActionFunction = async ({ request }) => {
+  // Handle CORS preflight requests
+  if (request.method === "OPTIONS") {
+    return new Response(null, { 
+      status: 200,
+      headers: corsHeaders 
+    });
+  }
+
   if (request.method !== "POST") {
-    return json({ error: "Method not allowed" }, { status: 405 });
+    return json({ error: "Method not allowed" }, { 
+      status: 405,
+      headers: corsHeaders 
+    });
   }
 
   try {
     const { loyalty_account_id, reward_id, cart_total } = await request.json();
 
     if (!loyalty_account_id || !reward_id) {
-      return json({ error: "Missing required fields" }, { status: 400 });
+      return json({ error: "Missing required fields" }, { 
+        status: 400,
+        headers: corsHeaders 
+      });
     }
 
     // Get loyalty account and reward details
@@ -28,11 +48,17 @@ export const action: ActionFunction = async ({ request }) => {
       .maybeSingle();
 
     if (!loyaltyAccount || !reward) {
-      return json({ error: "Invalid loyalty account or reward" }, { status: 404 });
+      return json({ error: "Invalid loyalty account or reward" }, { 
+        status: 404,
+        headers: corsHeaders 
+      });
     }
 
     if (loyaltyAccount.balance < reward.points_required) {
-      return json({ error: "Insufficient points" }, { status: 400 });
+      return json({ error: "Insufficient points" }, { 
+        status: 400,
+        headers: corsHeaders 
+      });
     }
 
     // Get Square reward definition for proper discount creation
@@ -66,7 +92,10 @@ export const action: ActionFunction = async ({ request }) => {
 
     if (shopifyDiscountResponse.error) {
       console.error('Shopify discount creation error:', shopifyDiscountResponse.error);
-      return json({ error: "Failed to create discount code" }, { status: 500 });
+      return json({ error: "Failed to create discount code" }, { 
+        status: 500,
+        headers: corsHeaders 
+      });
     }
 
     const discountData = shopifyDiscountResponse.data;
@@ -91,7 +120,10 @@ export const action: ActionFunction = async ({ request }) => {
     if (!squareResponse.ok) {
       const errorData = await squareResponse.json();
       console.error('Square redemption error:', errorData);
-      return json({ error: "Failed to redeem reward" }, { status: 500 });
+      return json({ error: "Failed to redeem reward" }, { 
+        status: 500,
+        headers: corsHeaders 
+      });
     }
 
     const squareData = await squareResponse.json();
@@ -121,10 +153,15 @@ export const action: ActionFunction = async ({ request }) => {
       square_reward_id: squareData.reward?.id,
       discount_code: discountData.discount_code,
       discount_expires_at: discountData.expires_at
+    }, {
+      headers: corsHeaders
     });
 
   } catch (error) {
     console.error('Error redeeming reward:', error);
-    return json({ error: "Internal server error" }, { status: 500 });
+    return json({ error: "Internal server error" }, { 
+      status: 500,
+      headers: corsHeaders 
+    });
   }
 };

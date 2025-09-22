@@ -2,16 +2,36 @@ import { json } from "@remix-run/node";
 import type { ActionFunction } from "@remix-run/node";
 import { supabase } from "~/integrations/supabase/client";
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
 export const action: ActionFunction = async ({ request }) => {
+  // Handle CORS preflight requests
+  if (request.method === "OPTIONS") {
+    return new Response(null, { 
+      status: 200,
+      headers: corsHeaders 
+    });
+  }
+
   if (request.method !== "POST") {
-    return json({ error: "Method not allowed" }, { status: 405 });
+    return json({ error: "Method not allowed" }, { 
+      status: 405,
+      headers: corsHeaders 
+    });
   }
 
   try {
     const { customer_id, email } = await request.json();
 
     if (!customer_id && !email) {
-      return json({ error: "Customer ID or email required" }, { status: 400 });
+      return json({ error: "Customer ID or email required" }, { 
+        status: 400,
+        headers: corsHeaders 
+      });
     }
 
     // Find customer profile by Shopify customer ID or email
@@ -29,7 +49,9 @@ export const action: ActionFunction = async ({ request }) => {
     const { data: profile, error: profileError } = await profileQuery;
 
     if (profileError || !profile) {
-      return json({ loyalty_account: null, available_rewards: [] });
+      return json({ loyalty_account: null, available_rewards: [] }, {
+        headers: corsHeaders
+      });
     }
 
     // Get available rewards
@@ -43,10 +65,15 @@ export const action: ActionFunction = async ({ request }) => {
     return json({
       loyalty_account: profile.loyalty_accounts[0] || null,
       available_rewards: rewards || []
+    }, {
+      headers: corsHeaders
     });
 
   } catch (error) {
     console.error('Error loading loyalty account:', error);
-    return json({ error: "Internal server error" }, { status: 500 });
+    return json({ error: "Internal server error" }, { 
+      status: 500,
+      headers: corsHeaders 
+    });
   }
 };
