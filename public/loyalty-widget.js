@@ -264,16 +264,31 @@
     // Strategy 1: Cart drawer
     const cartDrawerActions = document.querySelector('.cart-drawer__summary .cart-actions');
     if (cartDrawerActions) {
-      const cartNote = cartDrawerActions.querySelector('cart-note');
-      if (cartNote && !cartDrawerActions.querySelector('#' + SLOT_ID)) {
+      // Look for special instructions element first (preferred placement)
+      const specialInstructions = cartDrawerActions.querySelector('.cart-note, cart-note, [data-cart-note]');
+      
+      if (specialInstructions && !cartDrawerActions.querySelector('#' + SLOT_ID)) {
         const loyalty = createLoyaltySection();
-        cartDrawerActions.insertBefore(loyalty, cartNote);
-        cartDrawerActions.insertBefore(createDivider(), cartNote);
+        cartDrawerActions.insertBefore(loyalty, specialInstructions);
+        cartDrawerActions.insertBefore(createDivider(), specialInstructions);
         
         bindEvents();
         loadCustomerData();
         isWidgetLoaded = true;
-        console.log('Loyalty widget injected into cart drawer');
+        console.log('Loyalty widget injected into cart drawer above special instructions');
+        return;
+      }
+      
+      // Fallback: if no special instructions found, insert before first child
+      if (!cartDrawerActions.querySelector('#' + SLOT_ID) && cartDrawerActions.firstElementChild) {
+        const loyalty = createLoyaltySection();
+        cartDrawerActions.insertBefore(loyalty, cartDrawerActions.firstElementChild);
+        cartDrawerActions.insertBefore(createDivider(), cartDrawerActions.firstElementChild.nextElementSibling);
+        
+        bindEvents();
+        loadCustomerData();
+        isWidgetLoaded = true;
+        console.log('Loyalty widget injected into cart drawer at top');
         return;
       }
     }
