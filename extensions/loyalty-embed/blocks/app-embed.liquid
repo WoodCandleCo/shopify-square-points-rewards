@@ -62,17 +62,33 @@
         widget.className = 'loyalty-widget';
       }
 
-      // Prefer inserting before footer/checkout area inside the container
-      let anchor = null;
-      for (const sel of anchorSelectors) {
+      // Prefer inserting above special instructions (cart note) if present
+      const noteSelectors = [
+        '.cart-note','cart-note','[data-cart-note]','textarea[name="note"]',
+        '#CartSpecialInstructions','.cart__note','.cart__note-container','.cart__note-wrapper',
+        '.order-special-instructions','[id*="CartNote"]','[id*="SpecialInstructions"]'
+      ];
+      let noteEl = null;
+      for (const sel of noteSelectors) {
         const el = container.querySelector(sel);
-        if (el) { anchor = el; break; }
+        if (el) { noteEl = el; break; }
       }
-
-      if (anchor && anchor.parentNode) {
-        anchor.parentNode.insertBefore(widget, anchor);
+      if (noteEl) {
+        const noteAnchor = noteEl.closest('.cart__block, .cart__row, .cart-drawer__note, .cart-note, .cart__note, .field, .cart__blocks > *') || noteEl;
+        noteAnchor.parentNode?.insertBefore(widget, noteAnchor);
       } else {
-        container.insertBefore(widget, container.firstChild);
+        // Otherwise insert before footer/checkout area inside the container
+        let anchor = null;
+        for (const sel of anchorSelectors) {
+          const el = container.querySelector(sel);
+          if (el) { anchor = el; break; }
+        }
+        
+        if (anchor && anchor.parentNode) {
+          anchor.parentNode.insertBefore(widget, anchor);
+        } else {
+          container.insertBefore(widget, container.firstChild);
+        }
       }
 
       if (!widget.dataset.initialized) {
