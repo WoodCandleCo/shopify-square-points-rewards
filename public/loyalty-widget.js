@@ -5,7 +5,7 @@
   'use strict';
 
   // Configuration - Update this domain to match your deployment
-  const API_BASE_URL = 'https://shopify-square-points-rewards.lovable.app';
+  const API_BASE_URL = 'https://oxsxkwrsbpcmwghfmooz.supabase.co';
   
   // Widget state
   let isWidgetLoaded = false;
@@ -270,7 +270,7 @@
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/loyalty/account`, {
+      const response = await fetch(`${API_BASE_URL}/functions/v1/loyalty-account`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -314,7 +314,7 @@
     hideError();
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/loyalty/lookup`, {
+      const response = await fetch(`${API_BASE_URL}/functions/v1/loyalty-lookup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -354,7 +354,7 @@
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/loyalty/redeem`, {
+      const response = await fetch(`${API_BASE_URL}/functions/v1/loyalty-redeem`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

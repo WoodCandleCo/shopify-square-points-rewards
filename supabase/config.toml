@@ -14,3 +14,15 @@ verify_jwt = false
 
 [functions.test-shopify-config]
 verify_jwt = false
+
+[functions.update-product-tags]
+verify_jwt = false
+
+[functions.loyalty-lookup]
+verify_jwt = false
+
+[functions.loyalty-account]
+verify_jwt = false
+
+[functions.loyalty-redeem]
+verify_jwt = false
