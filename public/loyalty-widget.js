@@ -12,32 +12,35 @@
   let currentCustomerData = null;
   let loyaltyData = null;
 
-  // Widget HTML template
+  // Widget HTML template - styled to match Shopify checkout aesthetic
   const WIDGET_HTML = `
-    <div id="loyalty-widget" style="margin: 20px 0; padding: 15px; border: 1px solid #e1e5e9; border-radius: 8px; background: #f8f9fa;">
-      <div id="loyalty-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-        <h3 style="margin: 0; font-size: 16px; font-weight: 600; color: #2c3e50;">🎯 Loyalty Rewards</h3>
-        <span id="loyalty-toggle" style="font-size: 14px; color: #7f8c8d;">+</span>
+    <div id="loyalty-widget" style="margin: 16px 0; padding: 0; border: none; background: none;">
+      <div id="loyalty-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #e5e7eb; font-size: 16px; font-weight: 500; color: #111827;">
+        <span style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 18px;">🎁</span>
+          Loyalty rewards
+        </span>
+        <span id="loyalty-toggle" style="font-size: 20px; color: #6b7280; transition: transform 0.2s;">+</span>
       </div>
-      <div id="loyalty-content" style="display: none; margin-top: 15px;">
-        <div id="loyalty-loading" style="text-align: center; padding: 20px;">
-          <div style="display: inline-block; width: 20px; height: 20px; border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-          <p style="margin: 10px 0 0 0; color: #7f8c8d;">Loading your rewards...</p>
+      <div id="loyalty-content" style="display: none; padding: 16px 0 0 0;">
+        <div id="loyalty-loading" style="text-align: center; padding: 24px 0;">
+          <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          <p style="margin: 12px 0 0 0; color: #6b7280; font-size: 14px;">Loading your rewards...</p>
         </div>
         <div id="loyalty-login" style="display: none;">
-          <p style="margin: 0 0 10px 0; color: #34495e;">Connect your phone number to access loyalty rewards:</p>
-          <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <input type="tel" id="loyalty-phone" placeholder="Enter phone number" style="flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
-            <button id="loyalty-connect-btn" style="padding: 8px 16px; background: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">Connect</button>
+          <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px;">Enter your phone number to access loyalty rewards:</p>
+          <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+            <input type="tel" id="loyalty-phone" placeholder="Phone number" style="flex: 1; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+            <button id="loyalty-connect-btn" style="padding: 10px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s;">Connect</button>
           </div>
-          <div id="loyalty-error" style="display: none; color: #e74c3c; font-size: 14px; margin-top: 10px;"></div>
+          <div id="loyalty-error" style="display: none; color: #dc2626; font-size: 13px; margin-top: 8px;"></div>
         </div>
         <div id="loyalty-account" style="display: none;">
-          <div style="margin-bottom: 15px; padding: 10px; background: #ecf0f1; border-radius: 4px;">
-            <p style="margin: 0; font-weight: 600; color: #2c3e50;">Points Balance: <span id="loyalty-balance">0</span></p>
+          <div style="margin-bottom: 16px; padding: 12px; background: #f3f4f6; border-radius: 6px; border: 1px solid #e5e7eb;">
+            <p style="margin: 0; font-weight: 500; color: #111827; font-size: 14px;">Points Balance: <span id="loyalty-balance" style="color: #059669;">0</span></p>
           </div>
           <div id="loyalty-rewards">
-            <p style="margin: 0 0 10px 0; font-weight: 600; color: #2c3e50;">Available Rewards:</p>
+            <p style="margin: 0 0 12px 0; font-weight: 500; color: #111827; font-size: 14px;">Available Rewards:</p>
             <div id="loyalty-rewards-list"></div>
           </div>
         </div>
@@ -45,37 +48,68 @@
     </div>
   `;
 
-  // CSS animations
+  // CSS animations and styling to match Shopify checkout
   const WIDGET_CSS = `
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
     #loyalty-widget button:hover {
-      opacity: 0.9;
+      background-color: #2563eb !important;
+    }
+    #loyalty-widget input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
     #loyalty-widget .reward-item {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      padding: 10px;
-      margin: 5px 0;
+      align-items: flex-start;
+      padding: 12px;
+      margin: 8px 0;
       background: white;
-      border: 1px solid #e1e5e9;
-      border-radius: 4px;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      transition: border-color 0.2s;
+    }
+    #loyalty-widget .reward-item:hover {
+      border-color: #d1d5db;
     }
     #loyalty-widget .reward-item button {
-      padding: 6px 12px;
-      background: #27ae60;
+      padding: 8px 14px;
+      background: #059669;
       color: white;
       border: none;
-      border-radius: 4px;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 12px;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background-color 0.2s;
+      white-space: nowrap;
+      margin-left: 12px;
+    }
+    #loyalty-widget .reward-item button:hover {
+      background: #047857 !important;
     }
     #loyalty-widget .reward-item button:disabled {
-      background: #95a5a6;
+      background: #9ca3af;
       cursor: not-allowed;
+    }
+    #loyalty-widget .reward-info {
+      flex: 1;
+      min-width: 0;
+    }
+    #loyalty-widget .reward-name {
+      font-weight: 500;
+      color: #111827;
+      font-size: 14px;
+      margin: 0 0 4px 0;
+    }
+    #loyalty-widget .reward-points {
+      color: #6b7280;
+      font-size: 13px;
+      margin: 0;
     }
   `;
 
@@ -88,18 +122,46 @@
     style.textContent = WIDGET_CSS;
     document.head.appendChild(style);
 
-    // Find cart container and inject widget
+    // Find cart container and inject widget before special instructions
     const cartContainer = findCartContainer();
     if (cartContainer) {
-      cartContainer.insertAdjacentHTML('afterbegin', WIDGET_HTML);
+      // Try to insert before special instructions/discount sections
+      const insertBefore = cartContainer.querySelector('[data-special-instructions], .cart__note, .cart-note, .special-instructions, [data-cart-note], .cart__discount, .discount-input, [data-discount], .cart__footer, .cart-footer');
+      
+      if (insertBefore) {
+        insertBefore.insertAdjacentHTML('beforebegin', WIDGET_HTML);
+      } else {
+        cartContainer.insertAdjacentHTML('beforeend', WIDGET_HTML);
+      }
+      
       bindEvents();
       loadCustomerData();
       isWidgetLoaded = true;
     }
   }
 
-  // Find appropriate cart container
+  // Find appropriate cart container to insert before special instructions
   function findCartContainer() {
+    // First try to find special instructions or discount sections
+    const insertBeforeSelectors = [
+      '[data-special-instructions]',
+      '.cart__note',
+      '.cart-note',
+      '.special-instructions',
+      '[data-cart-note]',
+      '.cart__discount',
+      '.discount-input',
+      '[data-discount]',
+      '.cart__footer',
+      '.cart-footer'
+    ];
+
+    for (const selector of insertBeforeSelectors) {
+      const element = document.querySelector(selector);
+      if (element) return element.parentNode;
+    }
+
+    // Fallback to cart containers
     const selectors = [
       '.cart__items',
       '.cart-items',
@@ -386,9 +448,9 @@
 
     rewardsList.innerHTML = loyaltyData.available_rewards.map(reward => `
       <div class="reward-item">
-        <div>
-          <strong>${reward.name}</strong><br>
-          <small style="color: #7f8c8d;">${reward.points_required} points</small>
+        <div class="reward-info">
+          <p class="reward-name">${reward.name}</p>
+          <p class="reward-points">${reward.points_required} points</p>
         </div>
         <button data-reward-id="${reward.id}" onclick="window.redeemLoyaltyReward('${reward.id}', '${reward.name}')">
           Redeem
