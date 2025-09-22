@@ -12,11 +12,11 @@
   let currentCustomerData = null;
   let loyaltyData = null;
 
-  // Widget HTML template - styled to match Shopify cart design
+  // Widget HTML template - always visible, no accordion
   const WIDGET_HTML = `
     <div id="loyalty-widget" style="margin: 0 0 16px 0; padding: 0; border: none; background: none;">
-      <div id="loyalty-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-weight: 500; color: white;">
-        <span style="display: flex; align-items: center; gap: 8px;">
+      <div id="loyalty-header" style="padding: 16px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+        <span style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase; color: white;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="20,12 20,22 4,22 4,12"></polyline>
             <rect width="20" height="5" x="2" y="7"></rect>
@@ -25,9 +25,8 @@
           </svg>
           Loyalty Rewards
         </span>
-        <span id="loyalty-toggle" style="font-size: 20px; color: rgba(255, 255, 255, 0.7); transition: transform 0.2s;">+</span>
       </div>
-      <div id="loyalty-content" style="display: none; padding: 16px 0 0 0;">
+      <div id="loyalty-content" style="padding: 16px 0 0 0;">
         <div id="loyalty-loading" style="text-align: center; padding: 24px 0;">
           <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255, 255, 255, 0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
           <p style="margin: 12px 0 0 0; color: rgba(255, 255, 255, 0.7); font-size: 14px;">Loading your rewards...</p>
@@ -80,7 +79,6 @@
     }
 
     #loyalty-header { 
-      user-select: none; 
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       padding: 16px 0;
     }
@@ -89,6 +87,9 @@
       outline: none;
       border-color: #3b82f6;
       box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    #loyalty-widget input::placeholder {
+      color: rgba(255, 255, 255, 0.5);
     }
     #loyalty-widget .reward-item {
       display: flex;
@@ -212,15 +213,10 @@
     }
   }
 
-  // Bind event listeners
+  // Bind event listeners (no toggle functionality since it's always visible)
   function bindEvents() {
-    const header = document.getElementById('loyalty-header');
     const connectBtn = document.getElementById('loyalty-connect-btn');
     const phoneInput = document.getElementById('loyalty-phone');
-
-    if (header) {
-      header.addEventListener('click', toggleLoyaltyWidget);
-    }
 
     if (connectBtn) {
       connectBtn.addEventListener('click', connectLoyalty);
@@ -235,19 +231,7 @@
     }
   }
 
-  // Toggle widget visibility
-  function toggleLoyaltyWidget() {
-    const content = document.getElementById('loyalty-content');
-    const toggle = document.getElementById('loyalty-toggle');
-    
-    if (content && toggle) {
-      const isVisible = content.style.display !== 'none';
-      content.style.display = isVisible ? 'none' : 'block';
-      toggle.textContent = isVisible ? '+' : '−';
-    }
-  }
-
-  // Load customer data from Shopify
+  // Load customer data from Shopify and show appropriate content
   function loadCustomerData() {
     if (window.Shopify && window.Shopify.customer) {
       currentCustomerData = window.Shopify.customer;
