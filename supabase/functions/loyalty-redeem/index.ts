@@ -102,8 +102,8 @@ serve(async (req) => {
 
     console.log(`Using Square ${environment} environment for redemption`)
 
-    // Redeem points from Square
-    const squareRedeemResponse = await fetch(`${baseUrl}/v2/loyalty/accounts/${loyaltyAccount.square_loyalty_account_id}/redeem`, {
+    // Step 1: Create a loyalty reward in Square
+    const createRewardResponse = await fetch(`${baseUrl}/v2/loyalty/rewards`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${SQUARE_ACCESS_TOKEN}`,
@@ -111,22 +111,59 @@ serve(async (req) => {
         'Square-Version': '2024-10-17'
       },
       body: JSON.stringify({
-        points: reward.points_required,
-        order_id: `redeem-${Date.now()}` // Generate a unique order ID
+        idempotency_key: `reward-${Date.now()}-${Math.random()}`,
+        reward: {
+          loyalty_account_id: loyaltyAccount.square_loyalty_account_id,
+          reward_tier_id: reward.square_reward_id
+        }
       })
     })
 
-    if (!squareRedeemResponse.ok) {
-      const errorText = await squareRedeemResponse.text()
-      console.error(`Square redeem API error: ${squareRedeemResponse.status} - ${errorText}`)
+    if (!createRewardResponse.ok) {
+      const errorText = await createRewardResponse.text()
+      console.error(`Square create reward API error: ${createRewardResponse.status} - ${errorText}`)
       return new Response(
-        JSON.stringify({ error: 'Failed to redeem points from Square' }),
+        JSON.stringify({ error: 'Failed to create reward in Square' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    const squareRedeemData = await squareRedeemResponse.json()
-    console.log(`Square redeem response:`, JSON.stringify(squareRedeemData, null, 2))
+    const createRewardData = await createRewardResponse.json()
+    console.log(`Square create reward response:`, JSON.stringify(createRewardData, null, 2))
+
+    const rewardId = createRewardData.reward?.id
+    if (!rewardId) {
+      return new Response(
+        JSON.stringify({ error: 'Failed to get reward ID from Square' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Step 2: Redeem the loyalty reward in Square
+    const redeemResponse = await fetch(`${baseUrl}/v2/loyalty/rewards/${rewardId}/redeem`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SQUARE_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Square-Version': '2024-10-17'
+      },
+      body: JSON.stringify({
+        idempotency_key: `redeem-${Date.now()}-${Math.random()}`,
+        location_id: 'main' // You may need to get this from settings if you have multiple locations
+      })
+    })
+
+    if (!redeemResponse.ok) {
+      const errorText = await redeemResponse.text()
+      console.error(`Square redeem API error: ${redeemResponse.status} - ${errorText}`)
+      return new Response(
+        JSON.stringify({ error: 'Failed to redeem reward in Square' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const redeemData = await redeemResponse.json()
+    console.log(`Square redeem response:`, JSON.stringify(redeemData, null, 2))
 
     // Update local loyalty account balance
     const newBalance = loyaltyAccount.balance - reward.points_required
@@ -175,7 +212,7 @@ serve(async (req) => {
         reward_id: reward_id,
         points_redeemed: reward.points_required,
         discount_code: discountCode,
-        square_redemption_id: squareRedeemData.event?.id
+        square_redemption_id: redeemData.reward?.id
       })
 
     if (redemptionError) {
