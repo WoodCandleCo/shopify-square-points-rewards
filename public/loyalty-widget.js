@@ -12,13 +12,13 @@
   let currentCustomerData = null;
   let loyaltyData = null;
 
-  // Widget HTML template - styled to match Shopify checkout aesthetic
+  // Widget HTML template - styled to match Admin preview verbiage
   const WIDGET_HTML = `
     <div id="loyalty-widget" style="margin: 16px 0; padding: 0; border: none; background: none;">
       <div id="loyalty-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #e5e7eb; font-size: 16px; font-weight: 500; color: #111827;">
         <span style="display: flex; align-items: center; gap: 8px;">
           <span style="font-size: 18px;">🎁</span>
-          Loyalty rewards
+          Loyalty Rewards
         </span>
         <span id="loyalty-toggle" style="font-size: 20px; color: #6b7280; transition: transform 0.2s;">+</span>
       </div>
@@ -28,10 +28,10 @@
           <p style="margin: 12px 0 0 0; color: #6b7280; font-size: 14px;">Loading your rewards...</p>
         </div>
         <div id="loyalty-login" style="display: none;">
-          <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px;">Enter your phone number to access loyalty rewards:</p>
+          <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px;">Enter phone to access rewards</p>
           <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-            <input type="tel" id="loyalty-phone" placeholder="Phone number" style="flex: 1; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
-            <button id="loyalty-connect-btn" style="padding: 10px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s;">Connect</button>
+            <input type="tel" id="loyalty-phone" placeholder="+1 (555) 123-4567" style="flex: 1; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+            <button id="loyalty-connect-btn" style="padding: 10px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s;">Connect Account</button>
           </div>
           <div id="loyalty-error" style="display: none; color: #dc2626; font-size: 13px; margin-top: 8px;"></div>
         </div>
@@ -54,9 +54,12 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-    #loyalty-widget button:hover {
-      background-color: #2563eb !important;
-    }
+    /* Ensure the widget is its own row even inside flex parents */
+    #loyalty-widget { display: block; width: 100%; flex: 0 0 100%; }
+    #loyalty-widget * { box-sizing: border-box; }
+
+    #loyalty-header { user-select: none; }
+    #loyalty-widget button:hover { background-color: #2563eb !important; }
     #loyalty-widget input:focus {
       outline: none;
       border-color: #3b82f6;
@@ -73,9 +76,7 @@
       border-radius: 6px;
       transition: border-color 0.2s;
     }
-    #loyalty-widget .reward-item:hover {
-      border-color: #d1d5db;
-    }
+    #loyalty-widget .reward-item:hover { border-color: #d1d5db; }
     #loyalty-widget .reward-item button {
       padding: 8px 14px;
       background: #059669;
@@ -89,28 +90,11 @@
       white-space: nowrap;
       margin-left: 12px;
     }
-    #loyalty-widget .reward-item button:hover {
-      background: #047857 !important;
-    }
-    #loyalty-widget .reward-item button:disabled {
-      background: #9ca3af;
-      cursor: not-allowed;
-    }
-    #loyalty-widget .reward-info {
-      flex: 1;
-      min-width: 0;
-    }
-    #loyalty-widget .reward-name {
-      font-weight: 500;
-      color: #111827;
-      font-size: 14px;
-      margin: 0 0 4px 0;
-    }
-    #loyalty-widget .reward-points {
-      color: #6b7280;
-      font-size: 13px;
-      margin: 0;
-    }
+    #loyalty-widget .reward-item button:hover { background: #047857 !important; }
+    #loyalty-widget .reward-item button:disabled { background: #9ca3af; cursor: not-allowed; }
+    #loyalty-widget .reward-info { flex: 1; min-width: 0; }
+    #loyalty-widget .reward-name { font-weight: 500; color: #111827; font-size: 14px; margin: 0 0 4px 0; }
+    #loyalty-widget .reward-points { color: #6b7280; font-size: 13px; margin: 0; }
   `;
 
   // Initialize widget
@@ -171,26 +155,30 @@
 
   // Find the best insertion point within cart actions
   function findInsertionPoint(container) {
-    // If we're in cart-actions, try to insert before special instructions
-    if (container.classList && container.classList.contains('cart-actions')) {
-      const specialInstructions = container.querySelector('cart-note, .cart-note, .cart__note');
-      if (specialInstructions) {
-        return { element: specialInstructions, position: 'beforebegin' };
+    // Prefer to insert BEFORE the outer <cart-note> (Special instructions)
+    let outerCartNote = container.querySelector('cart-note');
+
+    // If we only find an inner .cart-note (accordion), try to climb to its <cart-note> ancestor
+    if (!outerCartNote) {
+      const inner = container.querySelector('.cart-note');
+      if (inner && inner.closest) {
+        const ancestor = inner.closest('cart-note');
+        if (ancestor) outerCartNote = ancestor;
       }
-      
-      // If no special instructions, try to insert after discount section
-      const discountSection = container.querySelector('disclosure-custom.cart-discount, .cart-discount');
-      if (discountSection) {
-        return { element: discountSection, position: 'afterend' };
-      }
-      
-      // Otherwise insert at the beginning of cart-actions
-      return { element: container, position: 'afterbegin' };
     }
-    
-    // For other containers, look for specific elements to insert before
-    const insertBefore = container.querySelector('[data-special-instructions], .cart__note, .cart-note, .special-instructions, [data-cart-note], .cart__discount, .discount-input, [data-discount], .cart__footer, .cart-footer');
-    
+
+    if (outerCartNote) {
+      return { element: outerCartNote, position: 'beforebegin' };
+    }
+
+    // Otherwise, optionally place it directly AFTER the Discount section
+    const discountSection = container.querySelector('disclosure-custom.cart-discount, .cart-discount');
+    if (discountSection) {
+      return { element: discountSection, position: 'afterend' };
+    }
+
+    // Fallbacks
+    const insertBefore = container.querySelector('[data-special-instructions], .cart__note, .special-instructions, [data-cart-note], .cart__discount, .discount-input, [data-discount], .cart__footer, .cart-footer');
     if (insertBefore) {
       return { element: insertBefore, position: 'beforebegin' };
     }
