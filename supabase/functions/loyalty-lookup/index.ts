@@ -117,65 +117,52 @@ serve(async (req) => {
     const squareLoyaltyAccount = squareData.loyalty_accounts[0]
     console.log(`Found Square loyalty account:`, JSON.stringify(squareLoyaltyAccount, null, 2))
 
-    // Create or update profile in Supabase
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .upsert({
-        shopify_customer_id: customer_id,
-        email: email,
-        phone: e164,
-        square_customer_id: squareLoyaltyAccount.customer_id
-      })
-      .select()
-      .single()
+    // Try to find existing profile first
+    let profile = null
+    if (customer_id || email) {
+      let profileQuery = supabase
+        .from('profiles')
+        .select('*')
+        .maybeSingle()
 
-    if (profileError) {
-      console.error('Profile error:', profileError)
-      return new Response(
-        JSON.stringify({ error: 'Failed to create profile' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+      if (customer_id) {
+        profileQuery = profileQuery.eq('shopify_customer_id', customer_id)
+      } else if (email) {
+        profileQuery = profileQuery.eq('email', email)
+      }
+
+      const { data: existingProfile } = await profileQuery
+      profile = existingProfile
     }
 
-    console.log(`Created/updated profile:`, JSON.stringify(profile, null, 2))
-
-    // Create or update loyalty account
-    const { data: loyaltyAccount, error: loyaltyError } = await supabase
-      .from('loyalty_accounts')
-      .upsert({
-        user_id: profile.id,
-        program_id: squareLoyaltyAccount.program_id,
-        square_loyalty_account_id: squareLoyaltyAccount.id,
-        balance: squareLoyaltyAccount.balance,
-        points_earned_lifetime: squareLoyaltyAccount.lifetime_points || 0
-      })
-      .select()
-      .single()
-
-    if (loyaltyError) {
-      console.error('Loyalty account error:', loyaltyError)
-      return new Response(
-        JSON.stringify({ error: 'Failed to create loyalty account' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    // Create a temporary loyalty account data for response (without saving to database)
+    const loyaltyAccountData = {
+      id: squareLoyaltyAccount.id, // Use Square's ID temporarily
+      program_id: squareLoyaltyAccount.program_id,
+      square_loyalty_account_id: squareLoyaltyAccount.id,
+      balance: squareLoyaltyAccount.balance,
+      points_earned_lifetime: squareLoyaltyAccount.lifetime_points || 0,
+      user_id: profile?.id || null
     }
 
-    console.log(`Created/updated loyalty account:`, JSON.stringify(loyaltyAccount, null, 2))
+    console.log(`Loyalty account data:`, JSON.stringify(loyaltyAccountData, null, 2))
 
-    // Get available rewards
+    // Get available rewards based on points balance
     const { data: rewards } = await supabase
       .from('loyalty_rewards')
       .select('*')
       .eq('is_active', true)
-      .lte('points_required', loyaltyAccount.balance)
+      .lte('points_required', loyaltyAccountData.balance)
       .order('points_required', { ascending: true })
 
     console.log(`Found ${rewards?.length || 0} available rewards`)
 
     return new Response(
       JSON.stringify({
-        loyalty_account: loyaltyAccount,
-        available_rewards: rewards || []
+        loyalty_account: loyaltyAccountData,
+        available_rewards: rewards || [],
+        square_customer_id: squareLoyaltyAccount.customer_id,
+        phone_number: e164
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
