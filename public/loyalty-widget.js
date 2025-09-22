@@ -264,13 +264,31 @@
     // Strategy 1: Cart drawer
     const cartDrawerActions = document.querySelector('.cart-drawer__summary .cart-actions');
     if (cartDrawerActions) {
-      // Look for special instructions element first (preferred placement)
-      const specialInstructions = cartDrawerActions.querySelector('.cart-note, cart-note, [data-cart-note]');
+      // Enhanced selectors for special instructions/cart note
+      const noteSelectors = [
+        '.cart-note', 'cart-note', '[data-cart-note]', 'textarea[name="note"]',
+        '#CartSpecialInstructions', '.cart__note', '.cart__note-container', 
+        '.cart__note-wrapper', '.order-special-instructions', '[id*="CartNote"]', 
+        '[id*="SpecialInstructions"]', '.cart-drawer__note', '[data-testid="cart-note"]',
+        'input[name="note"]', '.field[data-cart-note]', '.cart__attribute[data-cart-note]'
+      ];
+      
+      let specialInstructions = null;
+      for (const selector of noteSelectors) {
+        const element = cartDrawerActions.querySelector(selector);
+        if (element) {
+          specialInstructions = element;
+          break;
+        }
+      }
       
       if (specialInstructions && !cartDrawerActions.querySelector('#' + SLOT_ID)) {
+        // Find the container/wrapper around the special instructions
+        const noteContainer = specialInstructions.closest('.cart__block, .cart__row, .cart-drawer__note, .cart-note, .cart__note, .field, .cart__blocks > *') || specialInstructions;
+        
         const loyalty = createLoyaltySection();
-        cartDrawerActions.insertBefore(loyalty, specialInstructions);
-        cartDrawerActions.insertBefore(createDivider(), specialInstructions);
+        noteContainer.parentNode.insertBefore(loyalty, noteContainer);
+        noteContainer.parentNode.insertBefore(createDivider(), noteContainer);
         
         bindEvents();
         loadCustomerData();
