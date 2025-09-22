@@ -8,8 +8,9 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Settings, Eye, Gift, Tag, ChevronDown, ChevronRight, LogOut } from "lucide-react";
+import { Settings, Eye, Gift, Tag, ChevronDown, ChevronRight, LogOut, ExternalLink } from "lucide-react";
 import MockCheckoutPreview from "@/components/MockCheckoutPreview";
+import LoyaltySetup from "@/components/LoyaltySetup";
 import CombinedProductManager from "@/components/CombinedProductManager";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useToast } from "@/hooks/use-toast";
@@ -240,7 +241,7 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="settings" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
               Settings
@@ -252,6 +253,10 @@ const AdminDashboard = () => {
             <TabsTrigger value="mappings" className="flex items-center gap-2">
               <Tag className="w-4 h-4" />
               Product Tags
+            </TabsTrigger>
+            <TabsTrigger value="setup" className="flex items-center gap-2">
+              <ExternalLink className="w-4 h-4" />
+              Setup
             </TabsTrigger>
             <TabsTrigger value="preview" className="flex items-center gap-2">
               <Eye className="w-4 h-4" />
@@ -434,6 +439,10 @@ const AdminDashboard = () => {
 
           <TabsContent value="mappings" className="mt-6">
             <CombinedProductManager />
+          </TabsContent>
+
+          <TabsContent value="setup" className="mt-6">
+            <LoyaltySetup />
           </TabsContent>
 
           <TabsContent value="preview" className="mt-6">
