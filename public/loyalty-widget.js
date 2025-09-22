@@ -122,17 +122,11 @@
     style.textContent = WIDGET_CSS;
     document.head.appendChild(style);
 
-    // Find cart container and inject widget before special instructions
+    // Find cart container and inject widget in the optimal position
     const cartContainer = findCartContainer();
     if (cartContainer) {
-      // Try to insert before special instructions/discount sections
-      const insertBefore = cartContainer.querySelector('[data-special-instructions], .cart__note, .cart-note, .special-instructions, [data-cart-note], .cart__discount, .discount-input, [data-discount], .cart__footer, .cart-footer');
-      
-      if (insertBefore) {
-        insertBefore.insertAdjacentHTML('beforebegin', WIDGET_HTML);
-      } else {
-        cartContainer.insertAdjacentHTML('beforeend', WIDGET_HTML);
-      }
+      const insertionPoint = findInsertionPoint(cartContainer);
+      insertionPoint.element.insertAdjacentHTML(insertionPoint.position, WIDGET_HTML);
       
       bindEvents();
       loadCustomerData();
@@ -140,28 +134,21 @@
     }
   }
 
-  // Find appropriate cart container to insert before special instructions
+  // Find appropriate cart container to insert loyalty widget
   function findCartContainer() {
-    // First try to find special instructions or discount sections
-    const insertBeforeSelectors = [
-      '[data-special-instructions]',
-      '.cart__note',
-      '.cart-note',
-      '.special-instructions',
-      '[data-cart-note]',
-      '.cart__discount',
-      '.discount-input',
-      '[data-discount]',
-      '.cart__footer',
-      '.cart-footer'
-    ];
-
-    for (const selector of insertBeforeSelectors) {
-      const element = document.querySelector(selector);
-      if (element) return element.parentNode;
+    // First try to find specific Shopify cart action areas
+    const cartActions = document.querySelector('.cart-actions');
+    if (cartActions) {
+      return cartActions;
     }
 
-    // Fallback to cart containers
+    // Try to find cart summary areas
+    const cartSummary = document.querySelector('.cart-drawer__summary, .cart__summary-totals');
+    if (cartSummary) {
+      return cartSummary;
+    }
+
+    // Fallback to general cart containers
     const selectors = [
       '.cart__items',
       '.cart-items',
@@ -180,6 +167,35 @@
     }
 
     return document.querySelector('form[action="/cart"]') || document.querySelector('.cart');
+  }
+
+  // Find the best insertion point within cart actions
+  function findInsertionPoint(container) {
+    // If we're in cart-actions, try to insert before special instructions
+    if (container.classList && container.classList.contains('cart-actions')) {
+      const specialInstructions = container.querySelector('cart-note, .cart-note, .cart__note');
+      if (specialInstructions) {
+        return { element: specialInstructions, position: 'beforebegin' };
+      }
+      
+      // If no special instructions, try to insert after discount section
+      const discountSection = container.querySelector('disclosure-custom.cart-discount, .cart-discount');
+      if (discountSection) {
+        return { element: discountSection, position: 'afterend' };
+      }
+      
+      // Otherwise insert at the beginning of cart-actions
+      return { element: container, position: 'afterbegin' };
+    }
+    
+    // For other containers, look for specific elements to insert before
+    const insertBefore = container.querySelector('[data-special-instructions], .cart__note, .cart-note, .special-instructions, [data-cart-note], .cart__discount, .discount-input, [data-discount], .cart__footer, .cart-footer');
+    
+    if (insertBefore) {
+      return { element: insertBefore, position: 'beforebegin' };
+    }
+    
+    return { element: container, position: 'afterbegin' };
   }
 
   // Bind event listeners
