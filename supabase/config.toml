@@ -24,5 +24,8 @@ verify_jwt = false
 [functions.loyalty-account]
 verify_jwt = false
 
+[functions.loyalty-create]
+verify_jwt = false
+
 [functions.loyalty-redeem]
 verify_jwt = false

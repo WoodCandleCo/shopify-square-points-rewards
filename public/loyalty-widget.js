@@ -159,6 +159,18 @@
           </div>
           <div id="loyalty-error" style="display: none; color: #fca5a5; font-size: 13px; margin-top: 4px;"></div>
         </div>
+        <div id="loyalty-signup" style="display: none;">
+          <p style="margin: 0 0 8px 0; color: rgba(255, 255, 255, 0.9); font-size: 14px;">Create a loyalty account to start earning rewards</p>
+          <div style="margin-bottom: 8px;">
+            <input type="email" id="loyalty-email" placeholder="Email address" style="width: 100%; padding: 12px 16px; border: none; border-radius: 15px; font-size: 14px; background: rgba(255, 255, 255, 0.9); color: #333; outline: none; margin-bottom: 8px;">
+            <input type="tel" id="loyalty-signup-phone" placeholder="Phone number" style="width: 100%; padding: 12px 16px; border: none; border-radius: 15px; font-size: 14px; background: rgba(255, 255, 255, 0.9); color: #333; outline: none;">
+          </div>
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <button id="loyalty-signup-btn" style="flex: 1; padding: 12px 20px; background: #059669; color: white; border: none; border-radius: 15px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s;">Create Account</button>
+            <button id="loyalty-back-btn" style="padding: 12px 20px; background: rgba(255, 255, 255, 0.2); color: white; border: none; border-radius: 15px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s;">Back</button>
+          </div>
+          <div id="loyalty-signup-error" style="display: none; color: #fca5a5; font-size: 13px; margin-top: 4px;"></div>
+        </div>
         <div id="loyalty-account" style="display: none;">
           <div style="margin-bottom: 12px; padding: 10px; background: rgba(255, 255, 255, 0.1); border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.2);">
             <p style="margin: 0; font-weight: 500; color: white; font-size: 14px;">Points Balance: <span id="loyalty-balance" style="color: #10b981;">0</span></p>
@@ -276,10 +288,14 @@
   }
 
 
-  // Bind event listeners (no toggle functionality since it's always visible)
+  // Bind event listeners
   function bindEvents() {
     const connectBtn = document.getElementById('loyalty-connect-btn');
     const phoneInput = document.getElementById('loyalty-phone');
+    const signupBtn = document.getElementById('loyalty-signup-btn');
+    const backBtn = document.getElementById('loyalty-back-btn');
+    const emailInput = document.getElementById('loyalty-email');
+    const signupPhoneInput = document.getElementById('loyalty-signup-phone');
 
     if (connectBtn) {
       connectBtn.addEventListener('click', connectLoyalty);
@@ -289,6 +305,30 @@
       phoneInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
           connectLoyalty();
+        }
+      });
+    }
+
+    if (signupBtn) {
+      signupBtn.addEventListener('click', createLoyaltyAccount);
+    }
+
+    if (backBtn) {
+      backBtn.addEventListener('click', showLoyaltyLogin);
+    }
+
+    if (emailInput) {
+      emailInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          createLoyaltyAccount();
+        }
+      });
+    }
+
+    if (signupPhoneInput) {
+      signupPhoneInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          createLoyaltyAccount();
         }
       });
     }
@@ -375,7 +415,8 @@
         loyaltyData = data;
         showLoyaltyAccount();
       } else {
-        showError(data.error || 'No loyalty account found for this phone number');
+        // No account found, offer to create one
+        showLoyaltySignup();
       }
     } catch (error) {
       console.error('Error connecting loyalty account:', error);
@@ -486,6 +527,12 @@
     if (loginDiv) loginDiv.style.display = 'block';
   }
 
+  function showLoyaltySignup() {
+    hideAll();
+    const signupDiv = document.getElementById('loyalty-signup');
+    if (signupDiv) signupDiv.style.display = 'block';
+  }
+
   function showLoyaltyAccount() {
     hideAll();
     const accountDiv = document.getElementById('loyalty-account');
@@ -507,7 +554,7 @@
   }
 
   function hideAll() {
-    const sections = ['loyalty-loading', 'loyalty-login', 'loyalty-account'];
+    const sections = ['loyalty-loading', 'loyalty-login', 'loyalty-signup', 'loyalty-account'];
     sections.forEach(id => {
       const element = document.getElementById(id);
       if (element) element.style.display = 'none';
@@ -526,8 +573,8 @@
     rewardsList.innerHTML = loyaltyData.available_rewards.map(reward => `
       <div class="reward-item">
         <div class="reward-info">
-          <p class="reward-name">${reward.name}</p>
-          <p class="reward-points">${reward.points_required} points</p>
+          <div class="reward-name">${reward.name}</div>
+          <div class="reward-points">${reward.points_required} points</div>
         </div>
         <button data-reward-id="${reward.id}" onclick="window.redeemLoyaltyReward('${reward.id}', '${reward.name}')">
           Redeem
@@ -542,7 +589,72 @@
       errorDiv.textContent = message;
       errorDiv.style.display = 'block';
     }
+    }
   }
+
+  // Create loyalty account
+  async function createLoyaltyAccount() {
+    const emailInput = document.getElementById('loyalty-email');
+    const phoneInput = document.getElementById('loyalty-signup-phone');
+    const signupBtn = document.getElementById('loyalty-signup-btn');
+    const errorDiv = document.getElementById('loyalty-signup-error');
+    
+    if (!emailInput || !phoneInput || !signupBtn) return;
+
+    const email = emailInput.value.trim();
+    const phone = phoneInput.value.trim();
+    
+    if (!email || !phone) {
+      showSignupError('Please enter both email and phone number');
+      return;
+    }
+
+    signupBtn.disabled = true;
+    signupBtn.textContent = 'Creating...';
+    hideSignupError();
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/functions/v1/loyalty-create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          phone: phone
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        loyaltyData = data;
+        showLoyaltyAccount();
+      } else {
+        showSignupError(data.error || 'Failed to create loyalty account');
+      }
+    } catch (error) {
+      console.error('Error creating loyalty account:', error);
+      showSignupError('Failed to create loyalty account');
+    } finally {
+      signupBtn.disabled = false;
+      signupBtn.textContent = 'Create Account';
+    }
+  }
+
+  function showSignupError(message) {
+    const errorDiv = document.getElementById('loyalty-signup-error');
+    if (errorDiv) {
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+    }
+  }
+
+  function hideSignupError() {
+    const errorDiv = document.getElementById('loyalty-signup-error');
+    if (errorDiv) {
+      errorDiv.style.display = 'none';
+    }
 
   function hideError() {
     const errorDiv = document.getElementById('loyalty-error');
