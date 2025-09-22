@@ -40,7 +40,16 @@ serve(async (req) => {
       )
     }
 
-    console.log(`Looking up loyalty account for phone: ${phone}`)
+    // Normalize phone -> E.164 (+1XXXXXXXXXX default to US if 10 digits)
+    const rawDigits = String(phone).replace(/\D/g, '')
+    let e164 = String(phone).trim()
+    if (!String(phone).startsWith('+')) {
+      if (rawDigits.length === 10) e164 = `+1${rawDigits}`
+      else if (rawDigits.length === 11 && rawDigits.startsWith('1')) e164 = `+${rawDigits}`
+      else e164 = `+${rawDigits}`
+    }
+
+    console.log(`Looking up loyalty account for phone: ${e164}`)
 
     // Get the environment setting from the database
     const { data: settingData } = await supabase
@@ -66,7 +75,7 @@ serve(async (req) => {
 
     console.log(`Using Square ${environment} environment: ${baseUrl}`)
 
-    // Call Square API to find loyalty account by phone
+    // Call Square API to find loyalty account by phone using correct schema (mappings)
     const squareResponse = await fetch(`${baseUrl}/v2/loyalty/accounts/search`, {
       method: 'POST',
       headers: {
@@ -76,12 +85,11 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         query: {
-          filter: {
-            phone_number_filter: {
-              phone_number: phone
-            }
-          }
-        }
+          mappings: [
+            { phone_number: e164 }
+          ]
+        },
+        limit: 1
       })
     })
 
@@ -115,7 +123,7 @@ serve(async (req) => {
       .upsert({
         shopify_customer_id: customer_id,
         email: email,
-        phone: phone,
+        phone: e164,
         square_customer_id: squareLoyaltyAccount.customer_id
       })
       .select()
