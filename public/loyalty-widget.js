@@ -16,7 +16,7 @@
   const WIDGET_HTML = `
     <div id="loyalty-widget" style="margin: 0 0 16px 0; padding: 0; border: none; background: none;">
       <div id="loyalty-header" style="padding: 16px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-        <span style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase; color: white;">
+        <span style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; color: white; font-family: inherit;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="20,12 20,22 4,22 4,12"></polyline>
             <rect width="20" height="5" x="2" y="7"></rect>
@@ -34,8 +34,8 @@
         <div id="loyalty-login" style="display: none;">
           <p style="margin: 0 0 12px 0; color: rgba(255, 255, 255, 0.9); font-size: 14px;">Enter phone to access rewards</p>
           <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-            <input type="tel" id="loyalty-phone" placeholder="Phone number" style="flex: 1; padding: 12px 16px; border: none; border-radius: 25px; font-size: 14px; background: rgba(255, 255, 255, 0.9); color: #333; outline: none;">
-            <button id="loyalty-connect-btn" style="padding: 12px 20px; background: rgba(255, 255, 255, 0.9); color: #333; border: none; border-radius: 25px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s; white-space: nowrap;">Search</button>
+            <input type="tel" id="loyalty-phone" placeholder="Phone number" style="flex: 1; padding: 12px 16px; border: none; border-radius: 15px; font-size: 14px; background: rgba(255, 255, 255, 0.9); color: #333; outline: none;">
+            <button id="loyalty-connect-btn" style="padding: 12px 20px; background: rgba(255, 255, 255, 0.9); color: #333; border: none; border-radius: 15px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s; white-space: nowrap;">Search</button>
           </div>
           <div id="loyalty-error" style="display: none; color: #fca5a5; font-size: 13px; margin-top: 8px;"></div>
         </div>
