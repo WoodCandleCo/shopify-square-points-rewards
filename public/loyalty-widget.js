@@ -34,8 +34,8 @@
         <div id="loyalty-login" style="display: none;">
           <p style="margin: 0 0 12px 0; color: rgba(255, 255, 255, 0.9); font-size: 14px;">Enter phone to access rewards</p>
           <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-            <input type="tel" id="loyalty-phone" placeholder="+1 (555) 123-4567" style="flex: 1; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; font-size: 14px; background: rgba(255, 255, 255, 0.1); color: white;">
-            <button id="loyalty-connect-btn" style="padding: 10px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s;">Connect Account</button>
+            <input type="tel" id="loyalty-phone" placeholder="Phone number" style="flex: 1; padding: 12px 16px; border: none; border-radius: 25px; font-size: 14px; background: rgba(255, 255, 255, 0.9); color: #333; outline: none;">
+            <button id="loyalty-connect-btn" style="padding: 12px 20px; background: rgba(255, 255, 255, 0.9); color: #333; border: none; border-radius: 25px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s; white-space: nowrap;">Search</button>
           </div>
           <div id="loyalty-error" style="display: none; color: #fca5a5; font-size: 13px; margin-top: 8px;"></div>
         </div>
@@ -82,14 +82,15 @@
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       padding: 16px 0;
     }
-    #loyalty-widget button:hover { background-color: #2563eb !important; }
+    #loyalty-widget button:hover { 
+      background-color: rgba(255, 255, 255, 0.8) !important; 
+    }
     #loyalty-widget input:focus {
       outline: none;
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      background: rgba(255, 255, 255, 1);
     }
     #loyalty-widget input::placeholder {
-      color: rgba(255, 255, 255, 0.5);
+      color: rgba(0, 0, 0, 0.5);
     }
     #loyalty-widget .reward-item {
       display: flex;
