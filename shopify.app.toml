@@ -2,7 +2,7 @@
 # Docs: https://shopify.dev/docs/apps/build/cli-for-apps
 
 name = "CheckoutLoyalty"
-client_id = "a28df600ba90f215cfff605e2b37c4e8"
+client_id = "5c095e81f12ede37905c3437cf3b24c7"
 application_url = "https://shopify-square-points-rewards.lovable.app"
 embedded = true
 
