@@ -15,9 +15,14 @@
   // Widget HTML template - styled to match Admin preview verbiage
   const WIDGET_HTML = `
     <div id="loyalty-widget" style="margin: 16px 0; padding: 0; border: none; background: none;">
-      <div id="loyalty-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #e5e7eb; font-size: 16px; font-weight: 500; color: #111827;">
+      <div id="loyalty-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #e5e7eb; font-weight: 500;">
         <span style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-size: 18px;">🎁</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20,12 20,22 4,22 4,12"></polyline>
+            <rect width="20" height="5" x="2" y="7"></rect>
+            <line x1="12" x2="12" y1="22" y2="7"></line>
+            <path d="m12 7 3-3H9l3 3z"></path>
+          </svg>
           Loyalty Rewards
         </span>
         <span id="loyalty-toggle" style="font-size: 20px; color: #6b7280; transition: transform 0.2s;">+</span>
@@ -48,15 +53,25 @@
     </div>
   `;
 
-  // CSS animations and styling to match Shopify checkout
+  // CSS animations and styling to inherit page fonts
   const WIDGET_CSS = `
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
     /* Ensure the widget is its own row even inside flex parents */
-    #loyalty-widget { display: block; width: 100%; flex: 0 0 100%; }
-    #loyalty-widget * { box-sizing: border-box; }
+    #loyalty-widget { 
+      display: block; 
+      width: 100%; 
+      flex: 0 0 100%; 
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+    }
+    #loyalty-widget * { 
+      box-sizing: border-box; 
+      font-family: inherit;
+    }
 
     #loyalty-header { user-select: none; }
     #loyalty-widget button:hover { background-color: #2563eb !important; }
