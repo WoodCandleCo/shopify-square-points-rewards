@@ -12,10 +12,10 @@
   let currentCustomerData = null;
   let loyaltyData = null;
 
-  // Widget HTML template - styled to match Admin preview verbiage
+  // Widget HTML template - styled to match Shopify cart design
   const WIDGET_HTML = `
-    <div id="loyalty-widget" style="margin: 16px 0; padding: 0; border: none; background: none;">
-      <div id="loyalty-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #e5e7eb; font-weight: 500;">
+    <div id="loyalty-widget" style="margin: 0 0 16px 0; padding: 0; border: none; background: none;">
+      <div id="loyalty-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); font-weight: 500; color: white;">
         <span style="display: flex; align-items: center; gap: 8px;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="20,12 20,22 4,22 4,12"></polyline>
@@ -25,27 +25,27 @@
           </svg>
           Loyalty Rewards
         </span>
-        <span id="loyalty-toggle" style="font-size: 20px; color: #6b7280; transition: transform 0.2s;">+</span>
+        <span id="loyalty-toggle" style="font-size: 20px; color: rgba(255, 255, 255, 0.7); transition: transform 0.2s;">+</span>
       </div>
       <div id="loyalty-content" style="display: none; padding: 16px 0 0 0;">
         <div id="loyalty-loading" style="text-align: center; padding: 24px 0;">
-          <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid #e5e7eb; border-top: 2px solid #3b82f6; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-          <p style="margin: 12px 0 0 0; color: #6b7280; font-size: 14px;">Loading your rewards...</p>
+          <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255, 255, 255, 0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+          <p style="margin: 12px 0 0 0; color: rgba(255, 255, 255, 0.7); font-size: 14px;">Loading your rewards...</p>
         </div>
         <div id="loyalty-login" style="display: none;">
-          <p style="margin: 0 0 12px 0; color: #374151; font-size: 14px;">Enter phone to access rewards</p>
+          <p style="margin: 0 0 12px 0; color: rgba(255, 255, 255, 0.9); font-size: 14px;">Enter phone to access rewards</p>
           <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-            <input type="tel" id="loyalty-phone" placeholder="+1 (555) 123-4567" style="flex: 1; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; background: white;">
+            <input type="tel" id="loyalty-phone" placeholder="+1 (555) 123-4567" style="flex: 1; padding: 10px 12px; border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 6px; font-size: 14px; background: rgba(255, 255, 255, 0.1); color: white;">
             <button id="loyalty-connect-btn" style="padding: 10px 16px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s;">Connect Account</button>
           </div>
-          <div id="loyalty-error" style="display: none; color: #dc2626; font-size: 13px; margin-top: 8px;"></div>
+          <div id="loyalty-error" style="display: none; color: #fca5a5; font-size: 13px; margin-top: 8px;"></div>
         </div>
         <div id="loyalty-account" style="display: none;">
-          <div style="margin-bottom: 16px; padding: 12px; background: #f3f4f6; border-radius: 6px; border: 1px solid #e5e7eb;">
-            <p style="margin: 0; font-weight: 500; color: #111827; font-size: 14px;">Points Balance: <span id="loyalty-balance" style="color: #059669;">0</span></p>
+          <div style="margin-bottom: 16px; padding: 12px; background: rgba(255, 255, 255, 0.1); border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.2);">
+            <p style="margin: 0; font-weight: 500; color: white; font-size: 14px;">Points Balance: <span id="loyalty-balance" style="color: #10b981;">0</span></p>
           </div>
           <div id="loyalty-rewards">
-            <p style="margin: 0 0 12px 0; font-weight: 500; color: #111827; font-size: 14px;">Available Rewards:</p>
+            <p style="margin: 0 0 12px 0; font-weight: 500; color: white; font-size: 14px;">Available Rewards:</p>
             <div id="loyalty-rewards-list"></div>
           </div>
         </div>
@@ -53,27 +53,37 @@
     </div>
   `;
 
-  // CSS animations and styling to inherit page fonts
+  // CSS animations and styling to inherit page fonts and avoid layout disruption
   const WIDGET_CSS = `
     @keyframes spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
-    /* Ensure the widget is its own row even inside flex parents */
+    /* Ensure the widget doesn't break existing layout */
     #loyalty-widget { 
       display: block; 
       width: 100%; 
-      flex: 0 0 100%; 
+      margin: 0 0 16px 0;
+      padding: 0;
       font-family: inherit;
       font-size: inherit;
       line-height: inherit;
+      position: relative;
+      z-index: 1;
+      /* Ensure it doesn't interfere with flex layouts */
+      flex-shrink: 0;
+      order: -1; /* Try to place it early in flex order */
     }
     #loyalty-widget * { 
       box-sizing: border-box; 
       font-family: inherit;
     }
 
-    #loyalty-header { user-select: none; }
+    #loyalty-header { 
+      user-select: none; 
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 16px 0;
+    }
     #loyalty-widget button:hover { background-color: #2563eb !important; }
     #loyalty-widget input:focus {
       outline: none;
@@ -86,12 +96,12 @@
       align-items: flex-start;
       padding: 12px;
       margin: 8px 0;
-      background: white;
-      border: 1px solid #e5e7eb;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 6px;
       transition: border-color 0.2s;
     }
-    #loyalty-widget .reward-item:hover { border-color: #d1d5db; }
+    #loyalty-widget .reward-item:hover { border-color: rgba(255, 255, 255, 0.3); }
     #loyalty-widget .reward-item button {
       padding: 8px 14px;
       background: #059669;
@@ -108,8 +118,8 @@
     #loyalty-widget .reward-item button:hover { background: #047857 !important; }
     #loyalty-widget .reward-item button:disabled { background: #9ca3af; cursor: not-allowed; }
     #loyalty-widget .reward-info { flex: 1; min-width: 0; }
-    #loyalty-widget .reward-name { font-weight: 500; color: #111827; font-size: 14px; margin: 0 0 4px 0; }
-    #loyalty-widget .reward-points { color: #6b7280; font-size: 13px; margin: 0; }
+    #loyalty-widget .reward-name { font-weight: 500; color: white; font-size: 14px; margin: 0 0 4px 0; }
+    #loyalty-widget .reward-points { color: rgba(255, 255, 255, 0.7); font-size: 13px; margin: 0; }
   `;
 
   // Initialize widget
@@ -121,19 +131,23 @@
     style.textContent = WIDGET_CSS;
     document.head.appendChild(style);
 
-    // Find cart container and inject widget with multiple retry strategies
-    const cartContainer = findCartContainer();
-    if (cartContainer) {
+    // Find cart container and inject widget carefully to avoid layout disruption
+    const containerInfo = findCartContainer();
+    if (containerInfo) {
       // Check if widget already exists to prevent duplicates
       if (!document.getElementById('loyalty-widget')) {
-        const insertionPoint = findInsertionPoint(cartContainer);
-        insertionPoint.element.insertAdjacentHTML(insertionPoint.position, WIDGET_HTML);
-        
-        bindEvents();
-        loadCustomerData();
-        isWidgetLoaded = true;
-        
-        console.log('Loyalty widget injected successfully at:', insertionPoint.element.tagName + (insertionPoint.element.className ? '.' + insertionPoint.element.className.split(' ')[0] : ''));
+        const insertionPoint = findInsertionPoint(containerInfo);
+        if (insertionPoint) {
+          insertionPoint.element.insertAdjacentHTML(insertionPoint.position, WIDGET_HTML);
+          
+          bindEvents();
+          loadCustomerData();
+          isWidgetLoaded = true;
+          
+          console.log('Loyalty widget injected successfully using strategy:', containerInfo.strategy);
+        } else {
+          console.log('Could not determine insertion point for loyalty widget');
+        }
       } else {
         console.log('Loyalty widget already exists, skipping injection');
         isWidgetLoaded = true;
@@ -143,90 +157,59 @@
     }
   }
 
-  // Find appropriate cart container with more aggressive targeting
+  // Find appropriate cart container with careful targeting to avoid layout disruption
   function findCartContainer() {
-    // Try to find the exact cart summary area first
-    const cartSummary = document.querySelector('.cart-drawer__summary, .cart__summary-totals');
-    if (cartSummary) {
-      return cartSummary;
-    }
-
-    // Try to find cart actions specifically
+    // Strategy 1: Find cart-actions specifically and target that
     const cartActions = document.querySelector('.cart-actions');
     if (cartActions) {
-      return cartActions;
+      return { container: cartActions, strategy: 'cart-actions' };
     }
 
-    // Try broader cart drawer selectors
-    const cartDrawer = document.querySelector('.cart-drawer__content, .cart-drawer__inner');
-    if (cartDrawer) {
-      return cartDrawer;
+    // Strategy 2: Find cart summary but be more careful
+    const cartSummary = document.querySelector('.cart-drawer__summary .cart__summary-totals');
+    if (cartSummary) {
+      return { container: cartSummary, strategy: 'summary-totals' };
     }
 
-    // Try generic cart containers
-    const selectors = [
-      '.cart__items',
-      '.cart-items', 
-      '.cart-drawer__items',
-      '.drawer__cart-items',
-      '#cart-items',
-      '[data-cart-items]',
-      '.cart__content',
-      '.cart-content',
-      '.cart'
-    ];
-
-    for (const selector of selectors) {
-      const element = document.querySelector(selector);
-      if (element) return element;
+    // Strategy 3: Look for the area just before special instructions
+    const specialInstructions = document.querySelector('cart-note');
+    if (specialInstructions && specialInstructions.parentNode) {
+      return { container: specialInstructions.parentNode, strategy: 'before-special' };
     }
 
-    return document.querySelector('form[action="/cart"]') || document.querySelector('.cart');
+    return null;
   }
 
-  // Find the best insertion point with fallback strategies
-  function findInsertionPoint(container) {
-    // Strategy 1: Look for cart actions area and insert at beginning
-    if (container.classList.contains('cart-actions') || container.querySelector('.cart-actions')) {
-      const cartActions = container.classList.contains('cart-actions') ? container : container.querySelector('.cart-actions');
-      
-      // Try to insert before cart-note (special instructions)
-      const cartNote = cartActions.querySelector('cart-note');
-      if (cartNote) {
-        return { element: cartNote, position: 'beforebegin' };
-      }
-      
-      // Otherwise insert at the beginning of cart-actions
-      return { element: cartActions, position: 'afterbegin' };
+  // Find the best insertion point without breaking layout
+  function findInsertionPoint(containerInfo) {
+    if (!containerInfo) return null;
+
+    const { container, strategy } = containerInfo;
+
+    switch (strategy) {
+      case 'cart-actions':
+        // Insert as the first child of cart-actions, before any other elements
+        return { element: container, position: 'afterbegin' };
+        
+      case 'summary-totals':
+        // Insert before the cart-actions section if it exists
+        const cartActionsInSummary = container.querySelector('.cart-actions');
+        if (cartActionsInSummary) {
+          return { element: cartActionsInSummary, position: 'beforebegin' };
+        }
+        return { element: container, position: 'afterbegin' };
+        
+      case 'before-special':
+        // Insert right before the cart-note (special instructions)
+        const cartNote = container.querySelector('cart-note');
+        if (cartNote) {
+          return { element: cartNote, position: 'beforebegin' };
+        }
+        return { element: container, position: 'afterbegin' };
+        
+      default:
+        return { element: container, position: 'afterbegin' };
     }
-
-    // Strategy 2: Look for cart summary area
-    if (container.classList.contains('cart-drawer__summary') || container.classList.contains('cart__summary-totals')) {
-      return { element: container, position: 'afterbegin' };
-    }
-
-    // Strategy 3: Look for specific elements to insert before
-    const targetElements = [
-      'cart-note',
-      '.cart-note', 
-      '.cart__note',
-      '[data-special-instructions]',
-      '.special-instructions',
-      'disclosure-custom.cart-discount',
-      '.cart-discount',
-      '.cart__total-container',
-      '.cart__ctas'
-    ];
-
-    for (const selector of targetElements) {
-      const element = container.querySelector(selector);
-      if (element) {
-        return { element: element, position: 'beforebegin' };
-      }
-    }
-
-    // Strategy 4: Fallback to container
-    return { element: container, position: 'afterbegin' };
   }
 
   // Bind event listeners
