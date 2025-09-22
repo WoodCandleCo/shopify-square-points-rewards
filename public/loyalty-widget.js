@@ -1,4 +1,4 @@
-// Shopify Loyalty Widget - Script Injection Version
+// Shopify Loyalty Widget - Cart Drawer Integration
 // This file is hosted and injected into Shopify stores via theme.liquid
 
 (function() {
@@ -12,7 +12,127 @@
   let currentCustomerData = null;
   let loyaltyData = null;
 
-  // Widget HTML template - always visible, no accordion
+  // Constants for injection strategy
+  const SLOT_ID = 'cart-loyalty-slot';
+  const DIVIDER_CLASS = 'cart-actions__divider';
+
+  // Widget CSS - scoped to cart drawer summary
+  const WIDGET_CSS = `
+    /* Cart Loyalty slot — scoped to cart drawer */
+    .cart-drawer__summary .cart-actions .cart-loyalty {
+      display: block;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+    }
+
+    .cart-drawer__summary .cart-actions .cart-loyalty__mount * {
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* Widget styling within cart drawer context */
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget { 
+      display: block; 
+      width: 100%; 
+      margin: 0 0 16px 0;
+      padding: 0;
+      font-family: inherit;
+      font-size: inherit;
+      line-height: inherit;
+      position: relative;
+      z-index: 1;
+      flex-shrink: 0;
+    }
+
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget * { 
+      box-sizing: border-box; 
+      font-family: inherit;
+    }
+
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-header { 
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 16px 0;
+    }
+
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget button:hover { 
+      background-color: rgba(255, 255, 255, 0.8) !important; 
+    }
+
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget input:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 1);
+    }
+
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget input::placeholder {
+      color: rgba(0, 0, 0, 0.5);
+    }
+
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 12px;
+      margin: 8px 0;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      transition: border-color 0.2s;
+    }
+
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item:hover { 
+      border-color: rgba(255, 255, 255, 0.3); 
+    }
+
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item button {
+      padding: 8px 14px;
+      background: #059669;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background-color 0.2s;
+      white-space: nowrap;
+      margin-left: 12px;
+    }
+
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item button:hover { 
+      background: #047857 !important; 
+    }
+
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item button:disabled { 
+      background: #9ca3af; 
+      cursor: not-allowed; 
+    }
+
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-info { 
+      flex: 1; 
+      min-width: 0; 
+    }
+
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-name { 
+      font-weight: 500; 
+      color: white; 
+      font-size: 14px; 
+      margin: 0 0 4px 0; 
+    }
+
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-points { 
+      color: rgba(255, 255, 255, 0.7); 
+      font-size: 13px; 
+      margin: 0; 
+    }
+
+    /* Spinning animation */
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  `;
+
+  // Widget HTML template
   const WIDGET_HTML = `
     <div id="loyalty-widget" style="margin: 0 0 16px 0; padding: 0; border: none; background: none;">
       <div id="loyalty-header" style="padding: 16px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
@@ -52,77 +172,52 @@
     </div>
   `;
 
-  // CSS animations and styling to inherit page fonts and avoid layout disruption
-  const WIDGET_CSS = `
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    /* Ensure the widget doesn't break existing layout */
-    #loyalty-widget { 
-      display: block; 
-      width: 100%; 
-      margin: 0 0 16px 0;
-      padding: 0;
-      font-family: inherit;
-      font-size: inherit;
-      line-height: inherit;
-      position: relative;
-      z-index: 1;
-      /* Ensure it doesn't interfere with flex layouts */
-      flex-shrink: 0;
-      order: -1; /* Try to place it early in flex order */
-    }
-    #loyalty-widget * { 
-      box-sizing: border-box; 
-      font-family: inherit;
-    }
+  // Create loyalty section element
+  function createLoyaltySection() {
+    const section = document.createElement('section');
+    section.id = SLOT_ID;
+    section.className = 'cart-loyalty';
+    section.setAttribute('aria-label', 'Loyalty');
 
-    #loyalty-header { 
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 16px 0;
-    }
-    #loyalty-widget button:hover { 
-      background-color: rgba(255, 255, 255, 0.8) !important; 
-    }
-    #loyalty-widget input:focus {
-      outline: none;
-      background: rgba(255, 255, 255, 1);
-    }
-    #loyalty-widget input::placeholder {
-      color: rgba(0, 0, 0, 0.5);
-    }
-    #loyalty-widget .reward-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      padding: 12px;
-      margin: 8px 0;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 6px;
-      transition: border-color 0.2s;
-    }
-    #loyalty-widget .reward-item:hover { border-color: rgba(255, 255, 255, 0.3); }
-    #loyalty-widget .reward-item button {
-      padding: 8px 14px;
-      background: #059669;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
-      transition: background-color 0.2s;
-      white-space: nowrap;
-      margin-left: 12px;
-    }
-    #loyalty-widget .reward-item button:hover { background: #047857 !important; }
-    #loyalty-widget .reward-item button:disabled { background: #9ca3af; cursor: not-allowed; }
-    #loyalty-widget .reward-info { flex: 1; min-width: 0; }
-    #loyalty-widget .reward-name { font-weight: 500; color: white; font-size: 14px; margin: 0 0 4px 0; }
-    #loyalty-widget .reward-points { color: rgba(255, 255, 255, 0.7); font-size: 13px; margin: 0; }
-  `;
+    const mount = document.createElement('div');
+    mount.className = 'cart-loyalty__mount';
+    mount.id = 'cart-loyalty-mount';
+    mount.innerHTML = WIDGET_HTML;
+    section.appendChild(mount);
+    
+    return section;
+  }
+
+  // Create divider element
+  function createDivider() {
+    const div = document.createElement('div');
+    div.className = DIVIDER_CLASS;
+    div.setAttribute('aria-hidden', 'true');
+    return div;
+  }
+
+  // Insert loyalty slot into cart drawer
+  function insertSlot() {
+    const cartActions = document.querySelector('.cart-drawer__summary .cart-actions');
+    if (!cartActions) return;
+
+    const cartNote = cartActions.querySelector('cart-note');
+    if (!cartNote) return;
+
+    // Prevent duplicates
+    if (cartActions.querySelector('#' + SLOT_ID)) return;
+
+    const loyalty = createLoyaltySection();
+    cartActions.insertBefore(loyalty, cartNote);
+    cartActions.insertBefore(createDivider(), cartNote);
+
+    // Initialize widget functionality
+    bindEvents();
+    loadCustomerData();
+    isWidgetLoaded = true;
+    
+    console.log('Loyalty widget injected successfully into cart drawer');
+  }
 
   // Initialize widget
   function initLoyaltyWidget() {
@@ -133,86 +228,10 @@
     style.textContent = WIDGET_CSS;
     document.head.appendChild(style);
 
-    // Find cart container and inject widget carefully to avoid layout disruption
-    const containerInfo = findCartContainer();
-    if (containerInfo) {
-      // Check if widget already exists to prevent duplicates
-      if (!document.getElementById('loyalty-widget')) {
-        const insertionPoint = findInsertionPoint(containerInfo);
-        if (insertionPoint) {
-          insertionPoint.element.insertAdjacentHTML(insertionPoint.position, WIDGET_HTML);
-          
-          bindEvents();
-          loadCustomerData();
-          isWidgetLoaded = true;
-          
-          console.log('Loyalty widget injected successfully using strategy:', containerInfo.strategy);
-        } else {
-          console.log('Could not determine insertion point for loyalty widget');
-        }
-      } else {
-        console.log('Loyalty widget already exists, skipping injection');
-        isWidgetLoaded = true;
-      }
-    } else {
-      console.log('No suitable cart container found for loyalty widget injection');
-    }
+    // Insert the slot
+    insertSlot();
   }
 
-  // Find appropriate cart container with careful targeting to avoid layout disruption
-  function findCartContainer() {
-    // Strategy 1: Find cart-actions specifically and target that
-    const cartActions = document.querySelector('.cart-actions');
-    if (cartActions) {
-      return { container: cartActions, strategy: 'cart-actions' };
-    }
-
-    // Strategy 2: Find cart summary but be more careful
-    const cartSummary = document.querySelector('.cart-drawer__summary .cart__summary-totals');
-    if (cartSummary) {
-      return { container: cartSummary, strategy: 'summary-totals' };
-    }
-
-    // Strategy 3: Look for the area just before special instructions
-    const specialInstructions = document.querySelector('cart-note');
-    if (specialInstructions && specialInstructions.parentNode) {
-      return { container: specialInstructions.parentNode, strategy: 'before-special' };
-    }
-
-    return null;
-  }
-
-  // Find the best insertion point without breaking layout
-  function findInsertionPoint(containerInfo) {
-    if (!containerInfo) return null;
-
-    const { container, strategy } = containerInfo;
-
-    switch (strategy) {
-      case 'cart-actions':
-        // Insert as the first child of cart-actions, before any other elements
-        return { element: container, position: 'afterbegin' };
-        
-      case 'summary-totals':
-        // Insert before the cart-actions section if it exists
-        const cartActionsInSummary = container.querySelector('.cart-actions');
-        if (cartActionsInSummary) {
-          return { element: cartActionsInSummary, position: 'beforebegin' };
-        }
-        return { element: container, position: 'afterbegin' };
-        
-      case 'before-special':
-        // Insert right before the cart-note (special instructions)
-        const cartNote = container.querySelector('cart-note');
-        if (cartNote) {
-          return { element: cartNote, position: 'beforebegin' };
-        }
-        return { element: container, position: 'afterbegin' };
-        
-      default:
-        return { element: container, position: 'afterbegin' };
-    }
-  }
 
   // Bind event listeners (no toggle functionality since it's always visible)
   function bindEvents() {
@@ -320,7 +339,7 @@
       showError('Failed to connect loyalty account');
     } finally {
       connectBtn.disabled = false;
-      connectBtn.textContent = 'Connect';
+      connectBtn.textContent = 'Search';
     }
   }
 
@@ -492,31 +511,17 @@
   // Expose redeem function globally for button clicks
   window.redeemLoyaltyReward = redeemReward;
 
-  // Initialize when DOM is ready with multiple strategies
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initLoyaltyWidget);
-  } else {
-    initLoyaltyWidget();
-  }
+  // Initialize when DOM is ready
+  document.addEventListener('DOMContentLoaded', initLoyaltyWidget);
 
-  // Also try to initialize on common Shopify cart events
-  document.addEventListener('shopify:section:load', initLoyaltyWidget);
-  document.addEventListener('cart:updated', initLoyaltyWidget);
-  document.addEventListener('theme:cart:open', initLoyaltyWidget);
-  
-  // Fallback: retry initialization more aggressively for dynamic carts
-  let retryCount = 0;
-  const retryInit = setInterval(() => {
-    if (!isWidgetLoaded && retryCount < 20) { // Increased retry count
-      console.log(`Loyalty widget retry attempt ${retryCount + 1}`);
-      initLoyaltyWidget();
-      retryCount++;
-    } else {
-      clearInterval(retryInit);
-      if (!isWidgetLoaded) {
-        console.log('Loyalty widget failed to load after all retry attempts');
-      }
-    }
-  }, 500); // Faster retry interval
+  // MutationObserver for re-render resilience
+  const observer = new MutationObserver(insertSlot);
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+
+  // Listen for cart events
+  window.addEventListener('cart:open', insertSlot);
+  document.addEventListener('cart:updated', insertSlot);
+  document.addEventListener('cart:ready', insertSlot);
+  document.addEventListener('cart:refresh', insertSlot);
 
 })();
