@@ -42,14 +42,25 @@ serve(async (req) => {
 
     console.log(`Redeeming reward ${reward_id} for loyalty account ${loyalty_account_id}`)
 
-    // Get loyalty account details
-    const { data: loyaltyAccount, error: accountError } = await supabase
+    // Get loyalty account details (support both DB id and Square id)
+    let { data: loyaltyAccount, error: accountError } = await supabase
       .from('loyalty_accounts')
       .select('*')
       .eq('id', loyalty_account_id)
-      .single()
+      .maybeSingle()
+
+    if (!loyaltyAccount) {
+      const fallback = await supabase
+        .from('loyalty_accounts')
+        .select('*')
+        .eq('square_loyalty_account_id', loyalty_account_id)
+        .maybeSingle()
+      loyaltyAccount = fallback.data
+      accountError = fallback.error
+    }
 
     if (accountError || !loyaltyAccount) {
+      console.warn('Loyalty account not found by id or square_loyalty_account_id:', loyalty_account_id)
       return new Response(
         JSON.stringify({ error: 'Loyalty account not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
