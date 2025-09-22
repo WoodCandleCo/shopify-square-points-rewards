@@ -196,27 +196,70 @@
     return div;
   }
 
-  // Insert loyalty slot into cart drawer
+  // Insert loyalty slot into cart (both drawer and page)
   function insertSlot() {
-    const cartActions = document.querySelector('.cart-drawer__summary .cart-actions');
-    if (!cartActions) return;
+    // Strategy 1: Cart drawer
+    const cartDrawerActions = document.querySelector('.cart-drawer__summary .cart-actions');
+    if (cartDrawerActions) {
+      const cartNote = cartDrawerActions.querySelector('cart-note');
+      if (cartNote && !cartDrawerActions.querySelector('#' + SLOT_ID)) {
+        const loyalty = createLoyaltySection();
+        cartDrawerActions.insertBefore(loyalty, cartNote);
+        cartDrawerActions.insertBefore(createDivider(), cartNote);
+        
+        bindEvents();
+        loadCustomerData();
+        isWidgetLoaded = true;
+        console.log('Loyalty widget injected into cart drawer');
+        return;
+      }
+    }
 
-    const cartNote = cartActions.querySelector('cart-note');
-    if (!cartNote) return;
+    // Strategy 2: Cart page - various possible selectors
+    const cartPageSelectors = [
+      '.cart .cart__content',
+      '.cart-form',
+      '.cart',
+      '.page-cart .cart',
+      '[data-cart-contents]'
+    ];
 
-    // Prevent duplicates
-    if (cartActions.querySelector('#' + SLOT_ID)) return;
+    for (const selector of cartPageSelectors) {
+      const cartContainer = document.querySelector(selector);
+      if (cartContainer && !cartContainer.querySelector('#' + SLOT_ID)) {
+        // Try to find a good insertion point on cart page
+        const insertionPoints = [
+          cartContainer.querySelector('.cart__note, .cart-note, [data-cart-note]'),
+          cartContainer.querySelector('.cart-discount, .discount-form, [data-discount-form]'),
+          cartContainer.querySelector('.cart__footer, .cart-footer'),
+          cartContainer.querySelector('.cart__buttons, .cart-buttons'),
+          cartContainer.querySelector('.cart__totals, .cart-totals')
+        ];
 
-    const loyalty = createLoyaltySection();
-    cartActions.insertBefore(loyalty, cartNote);
-    cartActions.insertBefore(createDivider(), cartNote);
-
-    // Initialize widget functionality
-    bindEvents();
-    loadCustomerData();
-    isWidgetLoaded = true;
-    
-    console.log('Loyalty widget injected successfully into cart drawer');
+        const insertionPoint = insertionPoints.find(el => el !== null);
+        
+        if (insertionPoint) {
+          const loyalty = createLoyaltySection();
+          insertionPoint.parentNode.insertBefore(loyalty, insertionPoint);
+          
+          bindEvents();
+          loadCustomerData();
+          isWidgetLoaded = true;
+          console.log(`Loyalty widget injected into cart page using selector: ${selector}`);
+          return;
+        } else {
+          // Fallback: append to cart container
+          const loyalty = createLoyaltySection();
+          cartContainer.appendChild(loyalty);
+          
+          bindEvents();
+          loadCustomerData();
+          isWidgetLoaded = true;
+          console.log(`Loyalty widget appended to cart page: ${selector}`);
+          return;
+        }
+      }
+    }
   }
 
   // Initialize widget
@@ -518,10 +561,12 @@
   const observer = new MutationObserver(insertSlot);
   observer.observe(document.documentElement, { childList: true, subtree: true });
 
-  // Listen for cart events
+  // Listen for cart events (both drawer and page)
   window.addEventListener('cart:open', insertSlot);
   document.addEventListener('cart:updated', insertSlot);
   document.addEventListener('cart:ready', insertSlot);
   document.addEventListener('cart:refresh', insertSlot);
+  document.addEventListener('page:loaded', insertSlot);
+  window.addEventListener('load', insertSlot);
 
 })();
