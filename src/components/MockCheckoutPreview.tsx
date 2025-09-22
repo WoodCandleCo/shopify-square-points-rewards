@@ -324,7 +324,7 @@ const MockCheckoutPreview = () => {
               ))}
             </div>
 
-            {/* Loyalty Widget - The Main Feature */}
+            {/* Loyalty Rewards Widget */}
             <div className="bg-slate-700 rounded-lg p-4 mb-4">
               <div 
                 className="flex items-center justify-between cursor-pointer mb-3"
@@ -402,6 +402,22 @@ const MockCheckoutPreview = () => {
                   )}
                 </div>
               )}
+            </div>
+
+            {/* Special Instructions */}
+            <div className="bg-slate-700 rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between cursor-pointer mb-3">
+                <span className="font-medium">Special Instructions</span>
+                <span className="text-slate-400">+</span>
+              </div>
+            </div>
+
+            {/* Discount Section */}
+            <div className="bg-slate-700 rounded-lg p-4 mb-4">
+              <div className="flex items-center justify-between cursor-pointer mb-3">
+                <span className="font-medium">Discount</span>
+                <span className="text-slate-400">+</span>
+              </div>
             </div>
 
             {/* Discount Section */}
