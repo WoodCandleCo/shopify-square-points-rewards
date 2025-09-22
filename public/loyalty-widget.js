@@ -35,7 +35,7 @@
     .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget { 
       display: block; 
       width: 100%; 
-      margin: 0 0 16px 0;
+      margin: 0 0 12px 0;
       padding: 0;
       font-family: inherit;
       font-size: inherit;
@@ -52,7 +52,7 @@
 
     .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-header { 
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 16px 0;
+      padding: 12px 0 8px 0;
     }
 
     .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget button:hover { 
@@ -72,8 +72,8 @@
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      padding: 12px;
-      margin: 8px 0;
+      padding: 8px;
+      margin: 6px 0;
       background: rgba(255, 255, 255, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 6px;
@@ -134,8 +134,8 @@
 
   // Widget HTML template
   const WIDGET_HTML = `
-    <div id="loyalty-widget" style="margin: 0 0 16px 0; padding: 0; border: none; background: none;">
-      <div id="loyalty-header" style="padding: 16px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+    <div id="loyalty-widget" style="margin: 0 0 12px 0; padding: 0; border: none; background: none;">
+      <div id="loyalty-header" style="padding: 12px 0 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
         <span style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; color: white; font-family: inherit;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="20,12 20,22 4,22 4,12"></polyline>
@@ -146,25 +146,25 @@
           Loyalty Rewards
         </span>
       </div>
-      <div id="loyalty-content" style="padding: 16px 0 0 0;">
-        <div id="loyalty-loading" style="text-align: center; padding: 24px 0;">
+      <div id="loyalty-content" style="padding: 12px 0 0 0;">
+        <div id="loyalty-loading" style="text-align: center; padding: 16px 0;">
           <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255, 255, 255, 0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
-          <p style="margin: 12px 0 0 0; color: rgba(255, 255, 255, 0.7); font-size: 14px;">Loading your rewards...</p>
+          <p style="margin: 8px 0 0 0; color: rgba(255, 255, 255, 0.7); font-size: 14px;">Loading your rewards...</p>
         </div>
         <div id="loyalty-login" style="display: none;">
-          <p style="margin: 0 0 12px 0; color: rgba(255, 255, 255, 0.9); font-size: 14px;">Enter phone to access rewards</p>
-          <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+          <p style="margin: 0 0 8px 0; color: rgba(255, 255, 255, 0.9); font-size: 14px;">Enter phone to access rewards</p>
+          <div style="display: flex; gap: 8px; margin-bottom: 8px;">
             <input type="tel" id="loyalty-phone" placeholder="Phone number" style="flex: 1; padding: 12px 16px; border: none; border-radius: 15px; font-size: 14px; background: rgba(255, 255, 255, 0.9); color: #333; outline: none;">
             <button id="loyalty-connect-btn" style="padding: 12px 20px; background: rgba(255, 255, 255, 0.9); color: #333; border: none; border-radius: 15px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s; white-space: nowrap;">Search</button>
           </div>
-          <div id="loyalty-error" style="display: none; color: #fca5a5; font-size: 13px; margin-top: 8px;"></div>
+          <div id="loyalty-error" style="display: none; color: #fca5a5; font-size: 13px; margin-top: 4px;"></div>
         </div>
         <div id="loyalty-account" style="display: none;">
-          <div style="margin-bottom: 16px; padding: 12px; background: rgba(255, 255, 255, 0.1); border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.2);">
+          <div style="margin-bottom: 12px; padding: 10px; background: rgba(255, 255, 255, 0.1); border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.2);">
             <p style="margin: 0; font-weight: 500; color: white; font-size: 14px;">Points Balance: <span id="loyalty-balance" style="color: #10b981;">0</span></p>
           </div>
           <div id="loyalty-rewards">
-            <p style="margin: 0 0 12px 0; font-weight: 500; color: white; font-size: 14px;">Available Rewards:</p>
+            <p style="margin: 0 0 8px 0; font-weight: 500; color: white; font-size: 14px;">Available Rewards:</p>
             <div id="loyalty-rewards-list"></div>
           </div>
         </div>
