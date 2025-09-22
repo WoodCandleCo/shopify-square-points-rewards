@@ -35,7 +35,7 @@
     .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget { 
       display: block; 
       width: 100%; 
-      margin: 0 0 12px 0;
+      margin: 0;
       padding: 0;
       font-family: inherit;
       font-size: inherit;
@@ -52,7 +52,7 @@
 
     .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-header { 
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 12px 0 8px 0;
+      padding: 8px 0 6px 0;
     }
 
     .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget button:hover { 
@@ -134,8 +134,8 @@
 
   // Widget HTML template
   const WIDGET_HTML = `
-    <div id="loyalty-widget" style="margin: 0 0 12px 0; padding: 0; border: none; background: none;">
-      <div id="loyalty-header" style="padding: 12px 0 8px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+    <div id="loyalty-widget" style="margin: 0; padding: 0; border: none; background: none;">
+      <div id="loyalty-header" style="padding: 8px 0 6px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
         <span style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; letter-spacing: 0.1em; text-transform: uppercase; color: white; font-family: inherit;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="20,12 20,22 4,22 4,12"></polyline>
@@ -146,7 +146,7 @@
           Loyalty Rewards
         </span>
       </div>
-      <div id="loyalty-content" style="padding: 12px 0 0 0;">
+      <div id="loyalty-content" style="padding: 8px 0 0 0;">
         <div id="loyalty-loading" style="text-align: center; padding: 16px 0;">
           <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255, 255, 255, 0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
           <p style="margin: 8px 0 0 0; color: rgba(255, 255, 255, 0.7); font-size: 14px;">Loading your rewards...</p>
