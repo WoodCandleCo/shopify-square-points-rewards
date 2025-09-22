@@ -121,36 +121,52 @@
     style.textContent = WIDGET_CSS;
     document.head.appendChild(style);
 
-    // Find cart container and inject widget in the optimal position
+    // Find cart container and inject widget with multiple retry strategies
     const cartContainer = findCartContainer();
     if (cartContainer) {
-      const insertionPoint = findInsertionPoint(cartContainer);
-      insertionPoint.element.insertAdjacentHTML(insertionPoint.position, WIDGET_HTML);
-      
-      bindEvents();
-      loadCustomerData();
-      isWidgetLoaded = true;
+      // Check if widget already exists to prevent duplicates
+      if (!document.getElementById('loyalty-widget')) {
+        const insertionPoint = findInsertionPoint(cartContainer);
+        insertionPoint.element.insertAdjacentHTML(insertionPoint.position, WIDGET_HTML);
+        
+        bindEvents();
+        loadCustomerData();
+        isWidgetLoaded = true;
+        
+        console.log('Loyalty widget injected successfully at:', insertionPoint.element.tagName + (insertionPoint.element.className ? '.' + insertionPoint.element.className.split(' ')[0] : ''));
+      } else {
+        console.log('Loyalty widget already exists, skipping injection');
+        isWidgetLoaded = true;
+      }
+    } else {
+      console.log('No suitable cart container found for loyalty widget injection');
     }
   }
 
-  // Find appropriate cart container to insert loyalty widget
+  // Find appropriate cart container with more aggressive targeting
   function findCartContainer() {
-    // First try to find specific Shopify cart action areas
-    const cartActions = document.querySelector('.cart-actions');
-    if (cartActions) {
-      return cartActions;
-    }
-
-    // Try to find cart summary areas
+    // Try to find the exact cart summary area first
     const cartSummary = document.querySelector('.cart-drawer__summary, .cart__summary-totals');
     if (cartSummary) {
       return cartSummary;
     }
 
-    // Fallback to general cart containers
+    // Try to find cart actions specifically
+    const cartActions = document.querySelector('.cart-actions');
+    if (cartActions) {
+      return cartActions;
+    }
+
+    // Try broader cart drawer selectors
+    const cartDrawer = document.querySelector('.cart-drawer__content, .cart-drawer__inner');
+    if (cartDrawer) {
+      return cartDrawer;
+    }
+
+    // Try generic cart containers
     const selectors = [
       '.cart__items',
-      '.cart-items',
+      '.cart-items', 
       '.cart-drawer__items',
       '.drawer__cart-items',
       '#cart-items',
@@ -168,36 +184,48 @@
     return document.querySelector('form[action="/cart"]') || document.querySelector('.cart');
   }
 
-  // Find the best insertion point within cart actions
+  // Find the best insertion point with fallback strategies
   function findInsertionPoint(container) {
-    // Prefer to insert BEFORE the outer <cart-note> (Special instructions)
-    let outerCartNote = container.querySelector('cart-note');
+    // Strategy 1: Look for cart actions area and insert at beginning
+    if (container.classList.contains('cart-actions') || container.querySelector('.cart-actions')) {
+      const cartActions = container.classList.contains('cart-actions') ? container : container.querySelector('.cart-actions');
+      
+      // Try to insert before cart-note (special instructions)
+      const cartNote = cartActions.querySelector('cart-note');
+      if (cartNote) {
+        return { element: cartNote, position: 'beforebegin' };
+      }
+      
+      // Otherwise insert at the beginning of cart-actions
+      return { element: cartActions, position: 'afterbegin' };
+    }
 
-    // If we only find an inner .cart-note (accordion), try to climb to its <cart-note> ancestor
-    if (!outerCartNote) {
-      const inner = container.querySelector('.cart-note');
-      if (inner && inner.closest) {
-        const ancestor = inner.closest('cart-note');
-        if (ancestor) outerCartNote = ancestor;
+    // Strategy 2: Look for cart summary area
+    if (container.classList.contains('cart-drawer__summary') || container.classList.contains('cart__summary-totals')) {
+      return { element: container, position: 'afterbegin' };
+    }
+
+    // Strategy 3: Look for specific elements to insert before
+    const targetElements = [
+      'cart-note',
+      '.cart-note', 
+      '.cart__note',
+      '[data-special-instructions]',
+      '.special-instructions',
+      'disclosure-custom.cart-discount',
+      '.cart-discount',
+      '.cart__total-container',
+      '.cart__ctas'
+    ];
+
+    for (const selector of targetElements) {
+      const element = container.querySelector(selector);
+      if (element) {
+        return { element: element, position: 'beforebegin' };
       }
     }
 
-    if (outerCartNote) {
-      return { element: outerCartNote, position: 'beforebegin' };
-    }
-
-    // Otherwise, optionally place it directly AFTER the Discount section
-    const discountSection = container.querySelector('disclosure-custom.cart-discount, .cart-discount');
-    if (discountSection) {
-      return { element: discountSection, position: 'afterend' };
-    }
-
-    // Fallbacks
-    const insertBefore = container.querySelector('[data-special-instructions], .cart__note, .special-instructions, [data-cart-note], .cart__discount, .discount-input, [data-discount], .cart__footer, .cart-footer');
-    if (insertBefore) {
-      return { element: insertBefore, position: 'beforebegin' };
-    }
-    
+    // Strategy 4: Fallback to container
     return { element: container, position: 'afterbegin' };
   }
 
@@ -496,7 +524,7 @@
   // Expose redeem function globally for button clicks
   window.redeemLoyaltyReward = redeemReward;
 
-  // Initialize when DOM is ready
+  // Initialize when DOM is ready with multiple strategies
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initLoyaltyWidget);
   } else {
@@ -506,16 +534,21 @@
   // Also try to initialize on common Shopify cart events
   document.addEventListener('shopify:section:load', initLoyaltyWidget);
   document.addEventListener('cart:updated', initLoyaltyWidget);
+  document.addEventListener('theme:cart:open', initLoyaltyWidget);
   
-  // Fallback: retry initialization periodically for dynamic carts
+  // Fallback: retry initialization more aggressively for dynamic carts
   let retryCount = 0;
   const retryInit = setInterval(() => {
-    if (!isWidgetLoaded && retryCount < 10) {
+    if (!isWidgetLoaded && retryCount < 20) { // Increased retry count
+      console.log(`Loyalty widget retry attempt ${retryCount + 1}`);
       initLoyaltyWidget();
       retryCount++;
     } else {
       clearInterval(retryInit);
+      if (!isWidgetLoaded) {
+        console.log('Loyalty widget failed to load after all retry attempts');
+      }
     }
-  }, 1000);
+  }, 500); // Faster retry interval
 
 })();
