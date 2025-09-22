@@ -16,23 +16,32 @@
   const SLOT_ID = 'cart-loyalty-slot';
   const DIVIDER_CLASS = 'cart-actions__divider';
 
-  // Widget CSS - scoped to cart drawer summary
+  // Widget CSS - works for both cart drawer and cart page
   const WIDGET_CSS = `
-    /* Cart Loyalty slot — scoped to cart drawer */
-    .cart-drawer__summary .cart-actions .cart-loyalty {
+    /* Cart Loyalty slot — scoped to both cart drawer and cart page */
+    .cart-drawer__summary .cart-actions .cart-loyalty,
+    .cart .cart-loyalty,
+    .cart-form .cart-loyalty,
+    .cart__content .cart-loyalty {
       display: block;
       width: 100%;
       margin: 0;
       padding: 0;
     }
 
-    .cart-drawer__summary .cart-actions .cart-loyalty__mount * {
+    .cart-drawer__summary .cart-actions .cart-loyalty__mount *,
+    .cart .cart-loyalty__mount *,
+    .cart-form .cart-loyalty__mount *,
+    .cart__content .cart-loyalty__mount * {
       max-width: 100%;
       box-sizing: border-box;
     }
 
-    /* Widget styling within cart drawer context */
-    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget { 
+    /* Widget styling within cart contexts */
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget,
+    .cart .cart-loyalty #loyalty-widget,
+    .cart-form .cart-loyalty #loyalty-widget,
+    .cart__content .cart-loyalty #loyalty-widget { 
       display: block; 
       width: 100%; 
       margin: 0;
@@ -45,46 +54,71 @@
       flex-shrink: 0;
     }
 
-    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget * { 
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget *,
+    .cart .cart-loyalty #loyalty-widget *,
+    .cart-form .cart-loyalty #loyalty-widget *,
+    .cart__content .cart-loyalty #loyalty-widget * { 
       box-sizing: border-box; 
       font-family: inherit;
     }
 
-    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-header { 
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-header,
+    .cart .cart-loyalty #loyalty-header,
+    .cart-form .cart-loyalty #loyalty-header,
+    .cart__content .cart-loyalty #loyalty-header { 
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       padding: 8px 0 6px 0;
     }
 
-    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget button:hover { 
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget button:hover,
+    .cart .cart-loyalty #loyalty-widget button:hover,
+    .cart-form .cart-loyalty #loyalty-widget button:hover,
+    .cart__content .cart-loyalty #loyalty-widget button:hover { 
       background-color: rgba(255, 255, 255, 0.8) !important; 
     }
 
-    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget input:focus {
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget input:focus,
+    .cart .cart-loyalty #loyalty-widget input:focus,
+    .cart-form .cart-loyalty #loyalty-widget input:focus,
+    .cart__content .cart-loyalty #loyalty-widget input:focus {
       outline: none;
       background: rgba(255, 255, 255, 1);
     }
 
-    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget input::placeholder {
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget input::placeholder,
+    .cart .cart-loyalty #loyalty-widget input::placeholder,
+    .cart-form .cart-loyalty #loyalty-widget input::placeholder,
+    .cart__content .cart-loyalty #loyalty-widget input::placeholder {
       color: rgba(0, 0, 0, 0.5);
     }
 
-    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item {
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item,
+    .cart .cart-loyalty #loyalty-widget .reward-item,
+    .cart-form .cart-loyalty #loyalty-widget .reward-item,
+    .cart__content .cart-loyalty #loyalty-widget .reward-item {
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      padding: 8px;
-      margin: 6px 0;
+      align-items: center;
+      padding: 10px 12px;
+      margin: 4px 0;
       background: rgba(255, 255, 255, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.2);
       border-radius: 6px;
       transition: border-color 0.2s;
+      min-height: auto;
     }
 
-    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item:hover { 
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item:hover,
+    .cart .cart-loyalty #loyalty-widget .reward-item:hover,
+    .cart-form .cart-loyalty #loyalty-widget .reward-item:hover,
+    .cart__content .cart-loyalty #loyalty-widget .reward-item:hover { 
       border-color: rgba(255, 255, 255, 0.3); 
     }
 
-    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item button {
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item button,
+    .cart .cart-loyalty #loyalty-widget .reward-item button,
+    .cart-form .cart-loyalty #loyalty-widget .reward-item button,
+    .cart__content .cart-loyalty #loyalty-widget .reward-item button {
       padding: 8px 14px;
       background: #059669;
       color: white;
@@ -98,31 +132,48 @@
       margin-left: 12px;
     }
 
-    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item button:hover { 
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item button:hover,
+    .cart .cart-loyalty #loyalty-widget .reward-item button:hover,
+    .cart-form .cart-loyalty #loyalty-widget .reward-item button:hover,
+    .cart__content .cart-loyalty #loyalty-widget .reward-item button:hover { 
       background: #047857 !important; 
     }
 
-    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item button:disabled { 
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item button:disabled,
+    .cart .cart-loyalty #loyalty-widget .reward-item button:disabled,
+    .cart-form .cart-loyalty #loyalty-widget .reward-item button:disabled,
+    .cart__content .cart-loyalty #loyalty-widget .reward-item button:disabled { 
       background: #9ca3af; 
       cursor: not-allowed; 
     }
 
-    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-info { 
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-info,
+    .cart .cart-loyalty #loyalty-widget .reward-info,
+    .cart-form .cart-loyalty #loyalty-widget .reward-info,
+    .cart__content .cart-loyalty #loyalty-widget .reward-info { 
       flex: 1; 
       min-width: 0; 
     }
 
-    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-name { 
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-name,
+    .cart .cart-loyalty #loyalty-widget .reward-name,
+    .cart-form .cart-loyalty #loyalty-widget .reward-name,
+    .cart__content .cart-loyalty #loyalty-widget .reward-name { 
       font-weight: 500; 
       color: white; 
-      font-size: 14px; 
-      margin: 0 0 4px 0; 
-    }
-
-    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-points { 
-      color: rgba(255, 255, 255, 0.7); 
       font-size: 13px; 
       margin: 0; 
+      line-height: 1.2;
+    }
+
+    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-points,
+    .cart .cart-loyalty #loyalty-widget .reward-points,
+    .cart-form .cart-loyalty #loyalty-widget .reward-points,
+    .cart__content .cart-loyalty #loyalty-widget .reward-points { 
+      color: rgba(255, 255, 255, 0.6); 
+      font-size: 11px; 
+      margin: 2px 0 0 0; 
+      line-height: 1.1;
     }
 
     /* Spinning animation */
@@ -287,7 +338,6 @@
     insertSlot();
   }
 
-
   // Bind event listeners
   function bindEvents() {
     const connectBtn = document.getElementById('loyalty-connect-btn');
@@ -393,7 +443,7 @@
     }
 
     connectBtn.disabled = true;
-    connectBtn.textContent = 'Connecting...';
+    connectBtn.textContent = 'Searching...';
     hideError();
 
     try {
@@ -424,6 +474,56 @@
     } finally {
       connectBtn.disabled = false;
       connectBtn.textContent = 'Search';
+    }
+  }
+
+  // Create loyalty account
+  async function createLoyaltyAccount() {
+    const emailInput = document.getElementById('loyalty-email');
+    const phoneInput = document.getElementById('loyalty-signup-phone');
+    const signupBtn = document.getElementById('loyalty-signup-btn');
+    const errorDiv = document.getElementById('loyalty-signup-error');
+    
+    if (!emailInput || !phoneInput || !signupBtn) return;
+
+    const email = emailInput.value.trim();
+    const phone = phoneInput.value.trim();
+    
+    if (!email || !phone) {
+      showSignupError('Please enter both email and phone number');
+      return;
+    }
+
+    signupBtn.disabled = true;
+    signupBtn.textContent = 'Creating...';
+    hideSignupError();
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/functions/v1/loyalty-create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          phone: phone
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        loyaltyData = data;
+        showLoyaltyAccount();
+      } else {
+        showSignupError(data.error || 'Failed to create loyalty account');
+      }
+    } catch (error) {
+      console.error('Error creating loyalty account:', error);
+      showSignupError('Failed to create loyalty account');
+    } finally {
+      signupBtn.disabled = false;
+      signupBtn.textContent = 'Create Account';
     }
   }
 
@@ -589,56 +689,12 @@
       errorDiv.textContent = message;
       errorDiv.style.display = 'block';
     }
-    }
   }
 
-  // Create loyalty account
-  async function createLoyaltyAccount() {
-    const emailInput = document.getElementById('loyalty-email');
-    const phoneInput = document.getElementById('loyalty-signup-phone');
-    const signupBtn = document.getElementById('loyalty-signup-btn');
-    const errorDiv = document.getElementById('loyalty-signup-error');
-    
-    if (!emailInput || !phoneInput || !signupBtn) return;
-
-    const email = emailInput.value.trim();
-    const phone = phoneInput.value.trim();
-    
-    if (!email || !phone) {
-      showSignupError('Please enter both email and phone number');
-      return;
-    }
-
-    signupBtn.disabled = true;
-    signupBtn.textContent = 'Creating...';
-    hideSignupError();
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/functions/v1/loyalty-create`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email,
-          phone: phone
-        })
-      });
-
-      const data = await response.json();
-      
-      if (response.ok && data.success) {
-        loyaltyData = data;
-        showLoyaltyAccount();
-      } else {
-        showSignupError(data.error || 'Failed to create loyalty account');
-      }
-    } catch (error) {
-      console.error('Error creating loyalty account:', error);
-      showSignupError('Failed to create loyalty account');
-    } finally {
-      signupBtn.disabled = false;
-      signupBtn.textContent = 'Create Account';
+  function hideError() {
+    const errorDiv = document.getElementById('loyalty-error');
+    if (errorDiv) {
+      errorDiv.style.display = 'none';
     }
   }
 
@@ -652,12 +708,6 @@
 
   function hideSignupError() {
     const errorDiv = document.getElementById('loyalty-signup-error');
-    if (errorDiv) {
-      errorDiv.style.display = 'none';
-    }
-
-  function hideError() {
-    const errorDiv = document.getElementById('loyalty-error');
     if (errorDiv) {
       errorDiv.style.display = 'none';
     }
