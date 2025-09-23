@@ -311,7 +311,50 @@
       }
     }
 
-    // Strategy 2: Cart page - various possible selectors
+    // Strategy 2: Cart page summary actions
+    const cartPageActions = document.querySelector('.cart__summary-inner .cart-actions, .cart-page__summary .cart-actions, .cart__summary .cart-actions');
+    if (cartPageActions) {
+      // Reuse enhanced selectors to find the Special instructions block
+      const noteSelectors = [
+        '.cart-note', 'cart-note', '[data-cart-note]', 'textarea[name="note"]',
+        '#CartSpecialInstructions', '.cart__note', '.cart__note-container', 
+        '.cart__note-wrapper', '.order-special-instructions', '[id*="CartNote"]', 
+        '[id*="SpecialInstructions"]', '.cart-drawer__note', '[data-testid="cart-note"]',
+        'input[name="note"]', '.field[data-cart-note]', '.cart__attribute[data-cart-note]'
+      ];
+
+      let specialInstructions = null;
+      for (const selector of noteSelectors) {
+        const element = cartPageActions.querySelector(selector);
+        if (element) { specialInstructions = element; break; }
+      }
+
+      if (specialInstructions) {
+        const noteContainer = specialInstructions.closest('.cart__block, .cart__row, .cart-note, .cart__note, .field, .cart__blocks > *') || specialInstructions;
+        const existing = document.getElementById(SLOT_ID);
+        const loyalty = existing || createLoyaltySection();
+        noteContainer.parentNode.insertBefore(loyalty, noteContainer);
+        noteContainer.parentNode.insertBefore(createDivider(), noteContainer);
+        if (!existing) { bindEvents(); loadCustomerData(); }
+        isWidgetLoaded = true;
+        console.log('Loyalty widget injected into cart page summary above special instructions');
+        return;
+      }
+
+      // Fallback: insert at top of the summary actions
+      if (!cartPageActions.querySelector('#' + SLOT_ID) && cartPageActions.firstElementChild) {
+        const existing = document.getElementById(SLOT_ID);
+        const loyalty = existing || createLoyaltySection();
+        cartPageActions.insertBefore(loyalty, cartPageActions.firstElementChild);
+        cartPageActions.insertBefore(createDivider(), cartPageActions.firstElementChild.nextElementSibling);
+        if (!existing) { bindEvents(); loadCustomerData(); }
+        isWidgetLoaded = true;
+        console.log('Loyalty widget injected at top of cart page summary');
+        return;
+      }
+    }
+
+    // Strategy 3: Cart page - various possible selectors
     const cartPageSelectors = [
       '.cart .cart__content',
       '.cart-form',
