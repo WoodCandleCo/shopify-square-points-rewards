@@ -8,6 +8,35 @@ import { useToast } from "@/hooks/use-toast";
 import { Gift, Minus, Plus, Trash2 } from "lucide-react";
 
 const LoyaltyWidgetPreview = () => {
+  // Add Europa font to preview
+  useEffect(() => {
+    const europaFont = document.createElement('link');
+    europaFont.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap';
+    europaFont.rel = 'stylesheet';
+    document.head.appendChild(europaFont);
+    
+    // Add custom CSS for Europa-like styling in preview
+    const previewStyle = document.createElement('style');
+    previewStyle.textContent = `
+      .loyalty-preview-europa {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        font-weight: 500;
+        letter-spacing: 0.02em;
+      }
+      .loyalty-preview-europa * {
+        text-transform: uppercase;
+      }
+      .loyalty-preview-europa input {
+        text-transform: none !important;
+      }
+    `;
+    document.head.appendChild(previewStyle);
+    
+    return () => {
+      document.head.removeChild(europaFont);
+      document.head.removeChild(previewStyle);
+    };
+  }, []);
   const { toast } = useToast();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [loyaltyAccount, setLoyaltyAccount] = useState<any>(null);
@@ -81,7 +110,7 @@ const LoyaltyWidgetPreview = () => {
           <CardTitle>Cart Page Preview</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="bg-slate-700 text-white rounded-lg p-6 max-w-4xl mx-auto">
+          <div className="bg-slate-700 text-white rounded-lg p-6 max-w-4xl mx-auto loyalty-preview-europa">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               {/* Cart Items Section */}
               <div className="lg:col-span-2">
@@ -166,7 +195,7 @@ const LoyaltyWidgetPreview = () => {
               {/* Cart Summary Section */}
               <div className="lg:col-span-1">
                 {/* Loyalty Widget - This is the key preview */}
-                <div className="bg-slate-600 border border-slate-500 rounded-xl p-4 mb-6">
+                <div className="bg-slate-600 border border-slate-500 rounded-xl p-4 mb-6 loyalty-preview-europa" style={{textTransform: 'uppercase'}}>
                   <div className="flex items-center gap-2 mb-3 pb-2 border-b border-slate-500">
                     <Gift className="h-4 w-4 text-white" />
                     <span className="font-bold text-sm uppercase tracking-wider text-white">
