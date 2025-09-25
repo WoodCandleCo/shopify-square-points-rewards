@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Settings, Eye, Gift, Tag, ChevronDown, ChevronRight, LogOut, ExternalLink } from "lucide-react";
 import MockCheckoutPreview from "@/components/MockCheckoutPreview";
+import LoyaltyWidgetPreview from "@/components/LoyaltyWidgetPreview";
 import LoyaltySetup from "@/components/LoyaltySetup";
 import CombinedProductManager from "@/components/CombinedProductManager";
 import { useAppSettings } from "@/hooks/useAppSettings";
@@ -446,39 +447,54 @@ const AdminDashboard = () => {
           </TabsContent>
 
           <TabsContent value="preview" className="mt-6">
-            <div className="grid gap-6 lg:grid-cols-2">
+            <div className="grid gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Cart Loyalty Widget Preview</CardTitle>
+                  <CardTitle>Live Loyalty Widget Preview</CardTitle>
                   <CardDescription>
-                    See how your loyalty widget appears in the cart drawer
+                    See exactly how your loyalty widget appears in a real cart interface with current styling
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <MockCheckoutPreview />
+                  <LoyaltyWidgetPreview />
                 </CardContent>
               </Card>
               
-              <Card>
-                <CardHeader>
-                  <CardTitle>Extension Info</CardTitle>
-                  <CardDescription>
-                    Technical details about your loyalty extension
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="p-4 bg-muted rounded-lg">
-                    <p className="text-sm font-medium mb-2">Integration Details:</p>
-                    <ul className="text-sm text-muted-foreground space-y-1">
-                      <li>• Widget appears in cart drawer/page</li>
-                      <li>• Works with all Shopify plans</li>
-                      <li>• Real-time Square API integration</li>
-                      <li>• Automatic discount code generation</li>
-                      <li>• Mobile responsive design</li>
-                    </ul>
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="grid gap-6 lg:grid-cols-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Legacy Preview</CardTitle>
+                    <CardDescription>
+                      Basic cart drawer preview (kept for reference)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <MockCheckoutPreview />
+                  </CardContent>
+                </Card>
+                
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Extension Info</CardTitle>
+                    <CardDescription>
+                      Technical details about your loyalty extension
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="p-4 bg-muted rounded-lg">
+                      <p className="text-sm font-medium mb-2">Integration Details:</p>
+                      <ul className="text-sm text-muted-foreground space-y-1">
+                        <li>• Widget appears in cart drawer/page</li>
+                        <li>• Works with all Shopify plans</li>
+                        <li>• Real-time Square API integration</li>
+                        <li>• Automatic discount code generation</li>
+                        <li>• Mobile responsive design</li>
+                        <li>• Enhanced contrast for better visibility</li>
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
