@@ -189,6 +189,36 @@
        text-transform: uppercase;
      }
 
+    /* Broad fallback selectors for any cart layout */
+    .cart-loyalty #loyalty-widget { 
+      text-transform: uppercase; 
+      font-family: var(--font-body-family, var(--font-stack-body, var(--font-family-primary, inherit)));
+    }
+    .cart-loyalty #loyalty-widget * { 
+      box-sizing: border-box; 
+      font-family: var(--font-body-family, var(--font-stack-body, var(--font-family-primary, inherit)));
+    }
+    .cart-loyalty #loyalty-widget input, 
+    .cart-loyalty #loyalty-widget input::placeholder { 
+      text-transform: none;
+    }
+    .cart-loyalty #loyalty-widget .reward-item { 
+      display: flex; justify-content: space-between; align-items: center; 
+      padding: 10px 12px; margin: 4px 0; 
+      background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 6px; 
+    }
+    .cart-loyalty #loyalty-widget .reward-info { 
+      display: flex; justify-content: space-between; align-items: baseline; 
+      flex: 1; min-width: 0; margin-right: 12px; 
+    }
+    .cart-loyalty #loyalty-widget .reward-name { 
+      flex: 1; font-weight: 500; color: #fff; font-size: 13px; margin: 0; line-height: 1.2; text-transform: uppercase; 
+    }
+    .cart-loyalty #loyalty-widget .reward-points { 
+      color: rgba(255,255,255,0.6); font-size: 11px; margin: 0; line-height: 1.2; white-space: nowrap; margin-left: 8px; text-transform: uppercase; 
+    }
+    .cart-loyalty #loyalty-widget .reward-item button { text-transform: uppercase; }
+
     /* Spinning animation */
     @keyframes spin {
       0% { transform: rotate(0deg); }
