@@ -147,34 +147,41 @@
       cursor: not-allowed; 
     }
 
-    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-info,
-    .cart .cart-loyalty #loyalty-widget .reward-info,
-    .cart-form .cart-loyalty #loyalty-widget .reward-info,
-    .cart__content .cart-loyalty #loyalty-widget .reward-info { 
-      flex: 1; 
-      min-width: 0; 
-    }
+     .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-info,
+     .cart .cart-loyalty #loyalty-widget .reward-info,
+     .cart-form .cart-loyalty #loyalty-widget .reward-info,
+     .cart__content .cart-loyalty #loyalty-widget .reward-info { 
+       display: flex; 
+       justify-content: space-between;
+       align-items: baseline;
+       flex: 1; 
+       min-width: 0; 
+       margin-right: 12px;
+     }
 
-    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-name,
-    .cart .cart-loyalty #loyalty-widget .reward-name,
-    .cart-form .cart-loyalty #loyalty-widget .reward-name,
-    .cart__content .cart-loyalty #loyalty-widget .reward-name { 
-      font-weight: 500; 
-      color: white; 
-      font-size: 13px; 
-      margin: 0; 
-      line-height: 1.2;
-    }
+     .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-name,
+     .cart .cart-loyalty #loyalty-widget .reward-name,
+     .cart-form .cart-loyalty #loyalty-widget .reward-name,
+     .cart__content .cart-loyalty #loyalty-widget .reward-name { 
+       font-weight: 500; 
+       color: white; 
+       font-size: 13px; 
+       margin: 0; 
+       line-height: 1.2;
+       flex: 1;
+     }
 
-    .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-points,
-    .cart .cart-loyalty #loyalty-widget .reward-points,
-    .cart-form .cart-loyalty #loyalty-widget .reward-points,
-    .cart__content .cart-loyalty #loyalty-widget .reward-points { 
-      color: rgba(255, 255, 255, 0.6); 
-      font-size: 11px; 
-      margin: 2px 0 0 0; 
-      line-height: 1.1;
-    }
+     .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-points,
+     .cart .cart-loyalty #loyalty-widget .reward-points,
+     .cart-form .cart-loyalty #loyalty-widget .reward-points,
+     .cart__content .cart-loyalty #loyalty-widget .reward-points { 
+       color: rgba(255, 255, 255, 0.6); 
+       font-size: 11px; 
+       margin: 0; 
+       line-height: 1.2;
+       white-space: nowrap;
+       margin-left: 8px;
+     }
 
     /* Spinning animation */
     @keyframes spin {
@@ -752,17 +759,17 @@ function insertSlot() {
       return;
     }
 
-    rewardsList.innerHTML = loyaltyData.available_rewards.map(reward => `
-      <div class="reward-item">
-        <div class="reward-info">
-          <div class="reward-name">${reward.name}</div>
-          <div class="reward-points">${reward.points_required} points</div>
-        </div>
-        <button data-reward-id="${reward.id}" onclick="window.redeemLoyaltyReward('${reward.id}', '${reward.name}')">
-          Redeem
-        </button>
-      </div>
-    `).join('');
+     rewardsList.innerHTML = loyaltyData.available_rewards.map(reward => `
+       <div class="reward-item">
+         <div class="reward-info">
+           <div class="reward-name">${reward.name}</div>
+           <div class="reward-points">${reward.points_required} points</div>
+         </div>
+         <button data-reward-id="${reward.id}" onclick="window.redeemLoyaltyReward('${reward.id}', '${reward.name}')">
+           Redeem
+         </button>
+       </div>
+     `).join('');
   }
 
   function showError(message) {
