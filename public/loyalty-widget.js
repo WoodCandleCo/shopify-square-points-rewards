@@ -315,23 +315,28 @@ function insertSlot() {
       }
     }
 
-    // Strategy 2: Cart page - inject between cart items inline with products
-    const cartItems = document.querySelectorAll('.cart-item, [data-cart-item], .line-item, .cart__item');
-    
-    if (cartItems.length >= 2 && !document.getElementById(SLOT_ID)) {
+    // Strategy 2: Cart page - place at top of summary (right column)
+    const summaryContainer = document.querySelector(
+      '.cart-page__summary, .cart__summary, .cart__aside, .cart-right, .cart__right, .cart-summary, [data-cart-summary]'
+    );
+
+    if (summaryContainer && !document.getElementById(SLOT_ID)) {
       const loyalty = createLoyaltySection();
-      // Style it to match the inline product flow
-      loyalty.style.cssText = 'margin: 0; padding: 20px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.04);';
-      loyalty.querySelector('#cart-loyalty-mount').style.cssText = 'padding: 16px 0; background: transparent; border: none; border-radius: 0; width: 100%;';
-      
-      // Insert after the second cart item to appear inline with products
-      const secondItem = cartItems[1];
-      secondItem.parentNode.insertBefore(loyalty, secondItem.nextSibling);
-      
+      // Keep the outer section compact and let the inner mount be the card
+      loyalty.style.cssText = 'margin: 0 0 16px 0; padding: 0; background: transparent; border: none;';
+      const mountEl = loyalty.querySelector('#cart-loyalty-mount');
+      if (mountEl) {
+        // Make it stand out a bit more per feedback
+        mountEl.style.cssText = 'padding: 16px 18px; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 12px; width: 100%;';
+      }
+
+      // Insert at the very top of the summary column
+      summaryContainer.insertBefore(loyalty, summaryContainer.firstChild);
+
       bindEvents();
       loadCustomerData();
       isWidgetLoaded = true;
-      console.log('Loyalty widget injected inline between cart items');
+      console.log('Loyalty widget injected at top of cart summary column');
       return;
     }
 
