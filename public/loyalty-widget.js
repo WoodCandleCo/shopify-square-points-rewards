@@ -315,29 +315,23 @@ function insertSlot() {
       }
     }
 
-    // Strategy 2: Cart page - align with top of products inside items column
-    const cartPageItems = document.querySelector('.cart-page__items');
-    const cartPageSummary = document.querySelector('.cart-page__summary');
+    // Strategy 2: Cart page - inject between cart items inline with products
+    const cartItems = document.querySelectorAll('.cart-item, [data-cart-item], .line-item, .cart__item');
     
-    if (cartPageItems && !document.getElementById(SLOT_ID)) {
+    if (cartItems.length >= 2 && !document.getElementById(SLOT_ID)) {
       const loyalty = createLoyaltySection();
-      // Try to place just above the product list within the left column
-      const productList = cartPageItems.querySelector('.cart-items__wrapper, .cart-items, .cart__items, [data-cart-items], .cart-items__table');
-      if (productList) {
-        cartPageItems.insertBefore(loyalty, productList);
-      } else if (cartPageItems.firstElementChild) {
-        cartPageItems.insertBefore(loyalty, cartPageItems.firstElementChild.nextElementSibling || cartPageItems.firstElementChild);
-      } else if (cartPageSummary && cartPageItems.parentNode) {
-        // Fallback: before summary but still within the same parent
-        cartPageItems.parentNode.insertBefore(loyalty, cartPageSummary);
-      } else {
-        cartPageItems.appendChild(loyalty);
-      }
+      // Style it to match the inline product flow
+      loyalty.style.cssText = 'margin: 0; padding: 20px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.04);';
+      loyalty.querySelector('#cart-loyalty-mount').style.cssText = 'padding: 16px 0; background: transparent; border: none; border-radius: 0; width: 100%;';
+      
+      // Insert after the second cart item to appear inline with products
+      const secondItem = cartItems[1];
+      secondItem.parentNode.insertBefore(loyalty, secondItem.nextSibling);
       
       bindEvents();
       loadCustomerData();
       isWidgetLoaded = true;
-      console.log('Loyalty widget injected inside items column aligned with products');
+      console.log('Loyalty widget injected inline between cart items');
       return;
     }
 
