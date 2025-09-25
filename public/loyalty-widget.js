@@ -241,10 +241,12 @@
     section.id = SLOT_ID;
     section.className = 'cart-loyalty';
     section.setAttribute('aria-label', 'Loyalty');
+    section.style.cssText = 'margin: 16px 0; max-width: 100%;';
 
     const mount = document.createElement('div');
     mount.className = 'cart-loyalty__mount';
     mount.id = 'cart-loyalty-mount';
+    mount.style.cssText = 'padding: 16px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; max-width: 100%;';
     mount.innerHTML = WIDGET_HTML;
     section.appendChild(mount);
     
@@ -311,20 +313,20 @@
       }
     }
 
-    // Strategy 2: Cart page summary - target the summary container to position at top
-    const cartSummaryContainer = document.querySelector('.cart__summary-container, .cart-page__summary .cart__summary-inner, .cart__summary-inner');
-    if (cartSummaryContainer && !document.getElementById(SLOT_ID)) {
+    // Strategy 2: Cart page - position at product level to align with the red line
+    const cartItemsWrapper = document.querySelector('.cart-items__wrapper, .cart-items');
+    const cartTable = document.querySelector('.cart-items__table');
+    
+    if (cartItemsWrapper && cartTable && !document.getElementById(SLOT_ID)) {
       const loyalty = createLoyaltySection();
-      const divider = createDivider();
       
-      // Insert at the very top of the summary container
-      cartSummaryContainer.insertBefore(divider, cartSummaryContainer.firstElementChild);
-      cartSummaryContainer.insertBefore(loyalty, cartSummaryContainer.firstElementChild);
+      // Insert before the cart table to align with the top of products
+      cartItemsWrapper.insertBefore(loyalty, cartTable);
       
       bindEvents();
       loadCustomerData();
       isWidgetLoaded = true;
-      console.log('Loyalty widget injected at top of cart summary container');
+      console.log('Loyalty widget injected above cart items table');
       return;
     }
 
