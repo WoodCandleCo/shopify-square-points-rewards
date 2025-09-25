@@ -16,7 +16,7 @@
   const SLOT_ID = 'cart-loyalty-slot';
   const DIVIDER_CLASS = 'cart-actions__divider';
 
-  // Widget CSS - works for both cart drawer and cart page
+  // Widget CSS - works for both cart drawer and cart page, inherits Shopify fonts
   const WIDGET_CSS = `
     /* Cart Loyalty slot — scoped to both cart drawer and cart page */
     .cart-drawer__summary .cart-actions .cart-loyalty,
@@ -53,6 +53,7 @@
       z-index: 1;
       flex-shrink: 0;
       text-transform: uppercase;
+      font-family: var(--font-body-family, inherit);
     }
 
     .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget *,
@@ -60,7 +61,7 @@
     .cart-form .cart-loyalty #loyalty-widget *,
     .cart__content .cart-loyalty #loyalty-widget * { 
       box-sizing: border-box; 
-      font-family: inherit;
+      font-family: var(--font-body-family, var(--font-stack-body, var(--font-family-primary, inherit)));
     }
 
     .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-header,
