@@ -241,12 +241,12 @@
     section.id = SLOT_ID;
     section.className = 'cart-loyalty';
     section.setAttribute('aria-label', 'Loyalty');
-    section.style.cssText = 'margin: 16px 0; max-width: 100%;';
+    section.style.cssText = 'margin: 20px 0; max-width: 100%;';
 
     const mount = document.createElement('div');
     mount.className = 'cart-loyalty__mount';
     mount.id = 'cart-loyalty-mount';
-    mount.style.cssText = 'padding: 16px; background: rgba(255, 255, 255, 0.05); border-radius: 8px; max-width: 100%;';
+    mount.style.cssText = 'padding: 16px 18px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.18); border-radius: 12px; width: 100%; max-width: 720px;';
     mount.innerHTML = WIDGET_HTML;
     section.appendChild(mount);
     
@@ -262,7 +262,9 @@
   }
 
   // Insert loyalty slot into cart (both drawer and page)
-  function insertSlot() {
+function insertSlot() {
+    // Prevent duplicate injection across strategies
+    if (document.getElementById(SLOT_ID)) return;
     // Strategy 1: Cart drawer
     const cartDrawerActions = document.querySelector('.cart-drawer__summary .cart-actions');
     if (cartDrawerActions) {
@@ -313,21 +315,29 @@
       }
     }
 
-    // Strategy 2: Cart page - position between cart items and summary
+    // Strategy 2: Cart page - align with top of products inside items column
     const cartPageItems = document.querySelector('.cart-page__items');
     const cartPageSummary = document.querySelector('.cart-page__summary');
     
-    if (cartPageItems && cartPageSummary && !document.getElementById(SLOT_ID)) {
+    if (cartPageItems && !document.getElementById(SLOT_ID)) {
       const loyalty = createLoyaltySection();
-      loyalty.style.cssText = 'margin: 24px 0; padding: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; max-width: 600px;';
-      
-      // Insert after cart items but before summary
-      cartPageItems.parentNode.insertBefore(loyalty, cartPageSummary);
+      // Try to place just above the product list within the left column
+      const productList = cartPageItems.querySelector('.cart-items__wrapper, .cart-items, .cart__items, [data-cart-items], .cart-items__table');
+      if (productList) {
+        cartPageItems.insertBefore(loyalty, productList);
+      } else if (cartPageItems.firstElementChild) {
+        cartPageItems.insertBefore(loyalty, cartPageItems.firstElementChild.nextElementSibling || cartPageItems.firstElementChild);
+      } else if (cartPageSummary && cartPageItems.parentNode) {
+        // Fallback: before summary but still within the same parent
+        cartPageItems.parentNode.insertBefore(loyalty, cartPageSummary);
+      } else {
+        cartPageItems.appendChild(loyalty);
+      }
       
       bindEvents();
       loadCustomerData();
       isWidgetLoaded = true;
-      console.log('Loyalty widget injected between cart items and summary');
+      console.log('Loyalty widget injected inside items column aligned with products');
       return;
     }
 
