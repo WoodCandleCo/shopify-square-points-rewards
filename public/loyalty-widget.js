@@ -313,20 +313,21 @@
       }
     }
 
-    // Strategy 2: Cart page - position at product level to align with the red line
-    const cartItemsWrapper = document.querySelector('.cart-items__wrapper, .cart-items');
-    const cartTable = document.querySelector('.cart-items__table');
+    // Strategy 2: Cart page - position between cart items and summary
+    const cartPageItems = document.querySelector('.cart-page__items');
+    const cartPageSummary = document.querySelector('.cart-page__summary');
     
-    if (cartItemsWrapper && cartTable && !document.getElementById(SLOT_ID)) {
+    if (cartPageItems && cartPageSummary && !document.getElementById(SLOT_ID)) {
       const loyalty = createLoyaltySection();
+      loyalty.style.cssText = 'margin: 24px 0; padding: 20px; background: rgba(255, 255, 255, 0.05); border-radius: 12px; max-width: 600px;';
       
-      // Insert before the cart table to align with the top of products
-      cartItemsWrapper.insertBefore(loyalty, cartTable);
+      // Insert after cart items but before summary
+      cartPageItems.parentNode.insertBefore(loyalty, cartPageSummary);
       
       bindEvents();
       loadCustomerData();
       isWidgetLoaded = true;
-      console.log('Loyalty widget injected above cart items table');
+      console.log('Loyalty widget injected between cart items and summary');
       return;
     }
 
