@@ -52,6 +52,7 @@
       position: relative;
       z-index: 1;
       flex-shrink: 0;
+      text-transform: uppercase;
     }
 
     .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget *,
@@ -90,6 +91,7 @@
     .cart-form .cart-loyalty #loyalty-widget input::placeholder,
     .cart__content .cart-loyalty #loyalty-widget input::placeholder {
       color: rgba(0, 0, 0, 0.5);
+      text-transform: none;
     }
 
     .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item,
@@ -130,6 +132,7 @@
       transition: background-color 0.2s;
       white-space: nowrap;
       margin-left: 12px;
+      text-transform: uppercase;
     }
 
     .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item button:hover,
@@ -169,6 +172,7 @@
        margin: 0; 
        line-height: 1.2;
        flex: 1;
+       text-transform: uppercase;
      }
 
      .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-points,
@@ -181,6 +185,7 @@
        line-height: 1.2;
        white-space: nowrap;
        margin-left: 8px;
+       text-transform: uppercase;
      }
 
     /* Spinning animation */
