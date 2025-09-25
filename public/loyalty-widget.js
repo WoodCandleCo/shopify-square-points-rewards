@@ -315,28 +315,49 @@ function insertSlot() {
       }
     }
 
-    // Strategy 2: Cart page - place at top of summary (right column)
+    // Strategy 2: Cart page - inject at TOP of the summary actions (right column)
+    const summaryActions = document.querySelector(
+      '.cart-page__summary .cart-actions, .cart__summary-inner .cart-actions, .cart__summary-container .cart-actions, .cart__summary .cart-actions'
+    );
+
+    if (summaryActions && !document.getElementById(SLOT_ID)) {
+      const loyalty = createLoyaltySection();
+      // Let inner mount be the card
+      loyalty.style.cssText = 'margin: 0 0 12px 0; padding: 0; background: transparent; border: none;';
+      const mountEl = loyalty.querySelector('#cart-loyalty-mount');
+      if (mountEl) {
+        // Slightly stronger contrast so it stands out
+        mountEl.style.cssText = 'padding: 16px 18px; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 12px; width: 100%;';
+      }
+
+      // Insert before the first action (above Special instructions)
+      summaryActions.insertBefore(loyalty, summaryActions.firstElementChild || null);
+      // Keep the divider rhythm consistent
+      if (typeof createDivider === 'function') {
+        summaryActions.insertBefore(createDivider(), loyalty.nextSibling);
+      }
+
+      bindEvents();
+      loadCustomerData();
+      isWidgetLoaded = true;
+      console.log('Loyalty widget injected at top of cart summary actions');
+      return;
+    }
+
+    // Fallback: place at top of summary container if actions not found
     const summaryContainer = document.querySelector(
       '.cart-page__summary, .cart__summary, .cart__aside, .cart-right, .cart__right, .cart-summary, [data-cart-summary]'
     );
 
     if (summaryContainer && !document.getElementById(SLOT_ID)) {
       const loyalty = createLoyaltySection();
-      // Keep the outer section compact and let the inner mount be the card
       loyalty.style.cssText = 'margin: 0 0 16px 0; padding: 0; background: transparent; border: none;';
-      const mountEl = loyalty.querySelector('#cart-loyalty-mount');
-      if (mountEl) {
-        // Make it stand out a bit more per feedback
-        mountEl.style.cssText = 'padding: 16px 18px; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 12px; width: 100%;';
-      }
-
-      // Insert at the very top of the summary column
       summaryContainer.insertBefore(loyalty, summaryContainer.firstChild);
 
       bindEvents();
       loadCustomerData();
       isWidgetLoaded = true;
-      console.log('Loyalty widget injected at top of cart summary column');
+      console.log('Loyalty widget injected at top of cart summary container (fallback)');
       return;
     }
 
