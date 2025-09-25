@@ -315,36 +315,35 @@ function insertSlot() {
       }
     }
 
-    // Strategy 2: Cart page - inject at TOP of the summary actions (right column)
-    const summaryActions = document.querySelector(
-      '.cart-page__summary .cart-actions, .cart__summary-inner .cart-actions, .cart__summary-container .cart-actions, .cart__summary .cart-actions'
-    );
+    // Strategy 2: Cart page - inject at TOP of the cart-actions section
+    const cartActions = document.querySelector('.cart-actions');
 
-    if (summaryActions && !document.getElementById(SLOT_ID)) {
+    if (cartActions && !document.getElementById(SLOT_ID)) {
       const loyalty = createLoyaltySection();
-      // Let inner mount be the card
+      // Style to match the action elements
       loyalty.style.cssText = 'margin: 0 0 12px 0; padding: 0; background: transparent; border: none;';
       const mountEl = loyalty.querySelector('#cart-loyalty-mount');
       if (mountEl) {
-        // Slightly stronger contrast so it stands out
-        mountEl.style.cssText = 'padding: 16px 18px; background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 12px; width: 100%;';
+        // Enhanced contrast for better visibility
+        mountEl.style.cssText = 'padding: 16px 18px; background: rgba(255, 255, 255, 0.15); border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 12px; width: 100%;';
       }
 
-      // Insert before the first action (above Special instructions)
-      summaryActions.insertBefore(loyalty, summaryActions.firstElementChild || null);
-      // Keep the divider rhythm consistent
-      if (typeof createDivider === 'function') {
-        summaryActions.insertBefore(createDivider(), loyalty.nextSibling);
-      }
+      // Insert at the very top of cart-actions (before Special instructions)
+      cartActions.insertBefore(loyalty, cartActions.firstElementChild);
+      
+      // Add a divider after our widget to match the existing pattern
+      const divider = document.createElement('div');
+      divider.className = 'cart-actions__divider';
+      cartActions.insertBefore(divider, loyalty.nextElementSibling);
 
       bindEvents();
       loadCustomerData();
       isWidgetLoaded = true;
-      console.log('Loyalty widget injected at top of cart summary actions');
+      console.log('Loyalty widget injected at top of cart-actions');
       return;
     }
 
-    // Fallback: place at top of summary container if actions not found
+    // Fallback: place at top of summary container if cart-actions not found
     const summaryContainer = document.querySelector(
       '.cart-page__summary, .cart__summary, .cart__aside, .cart-right, .cart__right, .cart-summary, [data-cart-summary]'
     );
