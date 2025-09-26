@@ -40,7 +40,7 @@
 
   // API wrapper functions matching the specified endpoints
   const LoyaltyAPI = {
-    // 1) POST /api/loyalty/identify
+    // 1) POST /api/loyalty/identify (using Supabase edge function)
     async identify(phone, email) {
       const e164Phone = phone ? normalizePhoneToE164(phone) : null;
       
@@ -48,9 +48,12 @@
         throw new Error('Invalid phone number format. Please use international format (e.g., +1234567890)');
       }
 
-      const response = await fetch('/api/loyalty/identify', {
+      const response = await fetch('https://oxsxkwrsbpcmwghfmooz.supabase.co/functions/v1/loyalty-identify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3hrd3JzYnBjbXdnaGZtb296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNjE2MzksImV4cCI6MjA3MzczNzYzOX0.re0nwcRGwcvwl8F3Eu1C1g-P3QEwOtNFpK6MGrlL7ek'
+        },
         body: JSON.stringify({ phone: e164Phone, email })
       });
 
@@ -62,9 +65,13 @@
       return response.json();
     },
 
-    // 2) GET /api/loyalty/balance?accountId=...
+    // 2) GET /api/loyalty/balance?accountId=... (using Supabase edge function)
     async getBalance(accountId) {
-      const response = await fetch(`/api/loyalty/balance?accountId=${encodeURIComponent(accountId)}`);
+      const response = await fetch(`https://oxsxkwrsbpcmwghfmooz.supabase.co/functions/v1/loyalty-balance?accountId=${encodeURIComponent(accountId)}`, {
+        headers: { 
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3hrd3JzYnBjbXdnaGZtb296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNjE2MzksImV4cCI6MjA3MzczNzYzOX0.re0nwcRGwcvwl8F3Eu1C1g-P3QEwOtNFpK6MGrlL7ek'
+        }
+      });
       
       if (!response.ok) {
         const error = await response.json();
@@ -74,9 +81,13 @@
       return response.json();
     },
 
-    // 3) GET /api/loyalty/tiers?programId=...
+    // 3) GET /api/loyalty/tiers?programId=... (using Supabase edge function)
     async getTiers(programId) {
-      const response = await fetch(`/api/loyalty/tiers?programId=${encodeURIComponent(programId)}`);
+      const response = await fetch(`https://oxsxkwrsbpcmwghfmooz.supabase.co/functions/v1/loyalty-tiers?programId=${encodeURIComponent(programId)}`, {
+        headers: { 
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3hrd3JzYnBjbXdnaGZtb296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNjE2MzksImV4cCI6MjA3MzczNzYzOX0.re0nwcRGwcvwl8F3Eu1C1g-P3QEwOtNFpK6MGrlL7ek'
+        }
+      });
       
       if (!response.ok) {
         const error = await response.json();
@@ -86,9 +97,18 @@
       return response.json();
     },
 
-    // 4) GET /api/loyalty/promotions?programId=...
-    async getPromotions(programId) {
-      const response = await fetch(`/api/loyalty/promotions?programId=${encodeURIComponent(programId)}`);
+    // 4) GET /api/loyalty/promotions?programId=... (using Supabase edge function)
+    async getPromotions(programId, customerId, loyaltyAccountId) {
+      const url = new URL('https://oxsxkwrsbpcmwghfmooz.supabase.co/functions/v1/loyalty-promotions');
+      if (programId) url.searchParams.set('programId', programId);
+      if (customerId) url.searchParams.set('customerId', customerId);
+      if (loyaltyAccountId) url.searchParams.set('loyaltyAccountId', loyaltyAccountId);
+      
+      const response = await fetch(url, {
+        headers: { 
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3hrd3JzYnBjbXdnaGZtb296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNjE2MzksImV4cCI6MjA3MzczNzYzOX0.re0nwcRGwcvwl8F3Eu1C1g-P3QEwOtNFpK6MGrlL7ek'
+        }
+      });
       
       if (!response.ok) {
         const error = await response.json();
@@ -98,23 +118,34 @@
       return response.json();
     },
 
-    // 5) GET /api/loyalty/available-rewards?accountId=...
+    // 5) GET /api/loyalty/available-rewards?accountId=... (using Supabase edge function)
     async getAvailableRewards(accountId) {
-      const response = await fetch(`/api/loyalty/available-rewards?accountId=${encodeURIComponent(accountId)}`);
+      const response = await fetch('https://oxsxkwrsbpcmwghfmooz.supabase.co/functions/v1/loyalty-lookup', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3hrd3JzYnBjbXdnaGZtb296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNjE2MzksImV4cCI6MjA3MzczNzYzOX0.re0nwcRGwcvwl8F3Eu1C1g-P3QEwOtNFpK6MGrlL7ek'
+        },
+        body: JSON.stringify({ loyaltyAccountId: accountId })
+      });
       
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to get available rewards');
       }
 
-      return response.json();
+      const data = await response.json();
+      return data.available_rewards || [];
     },
 
-    // 6) POST /api/loyalty/redeem
+    // 6) POST /api/loyalty/redeem (using existing Supabase edge function)
     async redeem(loyaltyAccountId, rewardTierId) {
-      const response = await fetch('/api/loyalty/redeem', {
+      const response = await fetch('https://oxsxkwrsbpcmwghfmooz.supabase.co/functions/v1/loyalty-redeem', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3hrd3JzYnBjbXdnaGZtb296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNjE2MzksImV4cCI6MjA3MzczNzYzOX0.re0nwcRGwcvwl8F3Eu1C1g-P3QEwOtNFpK6MGrlL7ek'
+        },
         body: JSON.stringify({ loyaltyAccountId, rewardTierId })
       });
 
@@ -126,11 +157,14 @@
       return response.json();
     },
 
-    // 7) POST /api/loyalty/finalize
+    // 7) POST /api/loyalty/finalize (using existing Supabase edge function)
     async finalize(rewardId, success, shopifyOrderId) {
-      const response = await fetch('/api/loyalty/finalize', {
+      const response = await fetch('https://oxsxkwrsbpcmwghfmooz.supabase.co/functions/v1/loyalty-finalize', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3hrd3JzYnBjbXdnaGZtb296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNjE2MzksImV4cCI6MjA3MzczNzYzOX0.re0nwcRGwcvwl8F3Eu1C1g-P3QEwOtNFpK6MGrlL7ek'
+        },
         body: JSON.stringify({ rewardId, success, shopifyOrderId })
       });
 
@@ -189,13 +223,13 @@
         // Load all customer data in parallel
         const [rewards, promotions, tiers] = await Promise.all([
           LoyaltyAPI.getAvailableRewards(this.customerData.loyaltyAccountId),
-          LoyaltyAPI.getPromotions(this.customerData.programId),
+          LoyaltyAPI.getPromotions(this.customerData.programId, this.customerData.customerId, this.customerData.loyaltyAccountId),
           LoyaltyAPI.getTiers(this.customerData.programId)
         ]);
 
         this.customerData.availableRewards = rewards;
-        this.customerData.activePromotions = promotions;
-        this.customerData.tiers = tiers;
+        this.customerData.activePromotions = promotions.promotions || promotions;
+        this.customerData.tiers = tiers.rewardTiers || tiers;
       } catch (error) {
         console.error('Failed to load customer data:', error);
       }

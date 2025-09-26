@@ -1,10 +1,23 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Square, Gift, Users, Settings } from 'lucide-react';
 
 const Index = () => {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // Load the production loyalty widget
+    const script = document.createElement('script');
+    script.src = '/loyalty-widget-production.js';
+    script.async = true;
+    document.head.appendChild(script);
+
+    return () => {
+      // Cleanup
+      document.head.removeChild(script);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -51,6 +64,11 @@ const Index = () => {
               <li>3. Customers can access loyalty points during checkout</li>
               <li>4. Points are redeemed automatically with discounts applied</li>
             </ol>
+          </div>
+
+          <div className="mt-8 p-6 bg-card rounded-lg border max-w-2xl mx-auto">
+            <h3 className="text-lg font-semibold mb-4">Test Customer Widget</h3>
+            <div id="square-loyalty-widget"></div>
           </div>
         </div>
       </div>
