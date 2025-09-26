@@ -161,8 +161,9 @@
     init();
   }
 
-  // Load widget functionality
+  // Load widget functionality with cache-busting
   const widgetScript = document.createElement('script');
+  const version = String(Math.floor(Date.now() / 1000));
   widgetScript.innerHTML = `
     // Loyalty widget functionality
     function initializeLoyaltyWidget() {
