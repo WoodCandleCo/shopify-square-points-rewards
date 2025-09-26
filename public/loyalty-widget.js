@@ -217,7 +217,8 @@
     .cart-loyalty #loyalty-widget .reward-points { 
       color: rgba(255,255,255,0.6); font-size: 11px; margin: 0; line-height: 1.2; white-space: nowrap; margin-left: 8px; text-transform: uppercase; 
     }
-    .cart-loyalty #loyalty-widget .reward-item button { text-transform: uppercase; }
+    .cart-loyalty #loyalty-widget .reward-item button { background: #FFC857 !important; color: #333 !important; text-transform: uppercase; padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; transition: background-color 0.2s; white-space: nowrap; margin-left: 12px; }
+    .cart-loyalty #loyalty-widget .reward-item button:hover { background: #E6B649 !important; }
 
     /* Spinning animation */
     @keyframes spin {
