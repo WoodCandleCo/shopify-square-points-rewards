@@ -118,7 +118,7 @@ serve(async (req) => {
       }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error updating product tags:', error);
     return new Response(
       JSON.stringify({

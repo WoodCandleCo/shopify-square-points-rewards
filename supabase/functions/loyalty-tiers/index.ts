@@ -118,7 +118,7 @@ serve(async (req) => {
       }
     )
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Loyalty tiers error:', error)
     return new Response(
       JSON.stringify({ 

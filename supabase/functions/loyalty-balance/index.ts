@@ -103,7 +103,7 @@ serve(async (req) => {
       }
     )
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Loyalty balance error:', error)
     return new Response(
       JSON.stringify({ 

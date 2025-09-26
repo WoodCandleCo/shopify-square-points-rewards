@@ -233,7 +233,7 @@ serve(async (req) => {
       }
     )
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Loyalty identify error:', error)
     return new Response(
       JSON.stringify({ 

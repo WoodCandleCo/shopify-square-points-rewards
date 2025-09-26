@@ -41,7 +41,6 @@ serve(async (req) => {
     let profileQuery = supabase
       .from('profiles')
       .select('*, loyalty_accounts(*)')
-      .single()
 
     if (customer_id) {
       profileQuery = profileQuery.eq('shopify_customer_id', customer_id)
@@ -49,7 +48,7 @@ serve(async (req) => {
       profileQuery = profileQuery.eq('email', email)
     }
 
-    const { data: profile, error: profileError } = await profileQuery
+    const { data: profile, error: profileError } = await profileQuery.single()
 
     if (profileError || !profile) {
       console.log('No existing profile found')

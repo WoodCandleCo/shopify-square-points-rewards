@@ -123,7 +123,6 @@ serve(async (req) => {
       let profileQuery = supabase
         .from('profiles')
         .select('*')
-        .maybeSingle()
 
       if (customer_id) {
         profileQuery = profileQuery.eq('shopify_customer_id', customer_id)
@@ -131,7 +130,7 @@ serve(async (req) => {
         profileQuery = profileQuery.eq('email', email)
       }
 
-      const { data: existingProfile } = await profileQuery
+      const { data: existingProfile } = await profileQuery.maybeSingle()
       profile = existingProfile
     }
 

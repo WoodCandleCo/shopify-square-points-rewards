@@ -148,10 +148,10 @@ serve(async (req) => {
             'free 7oz candle': 'loyalty-7oz-candle'
           }
           
-          const loyaltyTag = rewardMappings[rewardNameLower]
+          const loyaltyTag = rewardMappings[rewardNameLower as keyof typeof rewardMappings]
           if (loyaltyTag) {
             // Find matching products by tag
-            const matchingProducts = shopifyProducts.filter(product => 
+            const matchingProducts = shopifyProducts.filter((product: any) => 
               product.tags && product.tags.toLowerCase().includes(loyaltyTag)
             )
             
@@ -166,7 +166,7 @@ serve(async (req) => {
               }
               
               // Collect all product details for the applicable_product_names array
-              applicableProductNames = matchingProducts.map(p => {
+              applicableProductNames = matchingProducts.map((p: any) => {
                 const variant = p.variants && p.variants.length > 0 ? p.variants[0] : null
                 return {
                   title: p.title,
@@ -177,7 +177,7 @@ serve(async (req) => {
                 }
               })
               
-              console.log(`Mapped "${rewardName}" to ${matchingProducts.length} products: ${matchingProducts.map(p => p.title).join(', ')}`)
+              console.log(`Mapped "${rewardName}" to ${matchingProducts.length} products: ${matchingProducts.map((p: any) => p.title).join(', ')}`)
             }
           }
         }
@@ -230,7 +230,7 @@ serve(async (req) => {
       },
     )
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in sync-square-rewards function:', error)
     return new Response(
       JSON.stringify({ 

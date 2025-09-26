@@ -133,7 +133,7 @@ serve(async (req) => {
       )
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Loyalty finalize error:', error)
     return new Response(
       JSON.stringify({ 

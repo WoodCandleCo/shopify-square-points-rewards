@@ -112,7 +112,7 @@ serve(async (req) => {
       }
     )
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Shopify webhook error:', error)
     return new Response(
       JSON.stringify({ 

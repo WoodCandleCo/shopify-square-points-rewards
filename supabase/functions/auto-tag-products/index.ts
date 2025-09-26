@@ -55,7 +55,7 @@ serve(async (req) => {
       `https://${shopifyStoreUrl}/admin/api/2024-10/products.json?limit=250&fields=id,title,handle,product_type,vendor,tags,body_html,variants`,
       {
         headers: {
-          'X-Shopify-Access-Token': shopifyAccessToken,
+          'X-Shopify-Access-Token': shopifyAccessToken!,
           'Content-Type': 'application/json'
         }
       }
@@ -72,12 +72,12 @@ serve(async (req) => {
     // Fetch collections and build product->collection map using REST endpoints
     let productCollectionMap = new Map(); // Map product ID to collection names
 
-    async function fetchCollections(endpoint) {
+    async function fetchCollections(endpoint: string): Promise<any[]> {
       const res = await fetch(
         `https://${shopifyStoreUrl}/admin/api/2024-10/${endpoint}.json?fields=id,title,handle`,
         {
           headers: {
-            'X-Shopify-Access-Token': shopifyAccessToken,
+            'X-Shopify-Access-Token': shopifyAccessToken!,
             'Content-Type': 'application/json'
           }
         }
@@ -104,7 +104,7 @@ serve(async (req) => {
         `https://${shopifyStoreUrl}/admin/api/2024-10/products.json?collection_id=${collection.id}&fields=id`,
         {
           headers: {
-            'X-Shopify-Access-Token': shopifyAccessToken,
+            'X-Shopify-Access-Token': shopifyAccessToken!,
             'Content-Type': 'application/json'
           }
         }
@@ -114,7 +114,7 @@ serve(async (req) => {
         const collectionProductsData = await collectionProductsResponse.json();
         const collectionProducts = collectionProductsData.products || [];
 
-        collectionProducts.forEach((product) => {
+        collectionProducts.forEach((product: any) => {
           if (!productCollectionMap.has(product.id)) {
             productCollectionMap.set(product.id, []);
           }
@@ -129,7 +129,7 @@ serve(async (req) => {
     console.log(`Found ${allProducts.length} total products in store`);
     if (allProducts.length > 0) {
       console.log('Sample product info:');
-      allProducts.slice(0, 3).forEach(p => {
+      allProducts.slice(0, 3).forEach((p: any) => {
         const collections = productCollectionMap.get(p.id) || [];
         console.log(`- "${p.title}" | Type: ${p.product_type} | Collections: [${collections.join(', ')}]`);
       });
@@ -148,13 +148,13 @@ serve(async (req) => {
         
         if (productName.includes('match')) {
           // Only tag products that actually have "match" in title (excluding "matching")
-          matchingProducts = allProducts.filter(product => {
+          matchingProducts = allProducts.filter((product: any) => {
             const title = product.title.toLowerCase();
             return title.includes('match') && !title.includes('matching');
           });
         } else if (productName.includes('wick trimmer')) {
           // Only tag products that are actually wick trimmers
-          matchingProducts = allProducts.filter(product => {
+          matchingProducts = allProducts.filter((product: any) => {
             const title = product.title.toLowerCase();
             const productType = (product.product_type || '').toLowerCase();
             return (title.includes('wick') && title.includes('trimmer')) || 
@@ -162,7 +162,7 @@ serve(async (req) => {
           });
         } else if (productName.includes('7oz candle')) {
           // Look for products in candle collections, excluding melts
-          matchingProducts = allProducts.filter(product => {
+          matchingProducts = allProducts.filter((product: any) => {
             const title = product.title.toLowerCase();
             const productType = (product.product_type || '').toLowerCase();
             const collections = productCollectionMap.get(product.id) || [];
@@ -170,25 +170,25 @@ serve(async (req) => {
                    !title.includes('melt') && 
                    !title.includes('trimmer') && 
                    !title.includes('warmer')) ||
-                   collections.some(col => col.includes('candle') && !col.includes('melt'));
+                   collections.some((col: string) => col.includes('candle') && !col.includes('melt'));
           });
         } else if (productName.includes('wax melt')) {
           // Look for products in wax melts collections
-          matchingProducts = allProducts.filter(product => {
+          matchingProducts = allProducts.filter((product: any) => {
             const title = product.title.toLowerCase();
             const productType = (product.product_type || '').toLowerCase();
             const collections = productCollectionMap.get(product.id) || [];
             return title.includes('melt') || 
                    productType.includes('melt') ||
                    title.includes('wax melt warmer') ||
-                   collections.some(col => col.includes('melt') || col.includes('wax'));
+                   collections.some((col: string) => col.includes('melt') || col.includes('wax'));
           });
         }
 
         console.log(`Found ${matchingProducts.length} products for ${mapping.product_name}`);
         
         if (matchingProducts.length > 0) {
-          const sampleProducts = matchingProducts.slice(0, 3).map(p => {
+          const sampleProducts = matchingProducts.slice(0, 3).map((p: any) => {
             const collections = productCollectionMap.get(p.id) || [];
             return `"${p.title}" (Collections: [${collections.join(', ')}])`;
           });
@@ -207,7 +207,7 @@ serve(async (req) => {
               {
                 method: 'PUT',
                 headers: {
-                  'X-Shopify-Access-Token': shopifyAccessToken,
+                  'X-Shopify-Access-Token': shopifyAccessToken!,
                   'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
@@ -260,11 +260,11 @@ serve(async (req) => {
           results.push({
             mapping_name: mapping.product_name,
             success: false,
-            error: `No products found containing: ${keywords.join(', ')}`
+            error: `No products found for mapping: ${mapping.product_name}`
           });
         }
 
-      } catch (error) {
+      } catch (error: any) {
         console.error(`Error processing mapping for ${mapping.product_name}:`, error);
         results.push({
           mapping_name: mapping.product_name,
@@ -288,7 +288,7 @@ serve(async (req) => {
       }
     );
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error auto-tagging products:', error);
     return new Response(
       JSON.stringify({
