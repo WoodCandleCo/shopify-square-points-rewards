@@ -31,58 +31,80 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { loyalty_account_id, reward_id } = await req.json()
+    const body = await req.json()
+    const loyaltyAccountId = body.loyalty_account_id ?? body.loyaltyAccountId ?? body.accountId
+    const rewardId = body.reward_id ?? body.rewardId ?? null
+    const rewardTierId = body.reward_tier_id ?? body.rewardTierId ?? null
 
-    if (!loyalty_account_id || !reward_id) {
+    if (!loyaltyAccountId || (!rewardId && !rewardTierId)) {
       return new Response(
-        JSON.stringify({ error: 'Loyalty account ID and reward ID required' }),
+        JSON.stringify({ error: 'Loyalty account ID and reward (or reward tier) required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    console.log(`Redeeming reward ${reward_id} for loyalty account ${loyalty_account_id}`)
+    console.log(`Redeeming reward request for loyalty account ${loyaltyAccountId} (rewardId=${rewardId ?? 'n/a'}, rewardTierId=${rewardTierId ?? 'n/a'})`)
 
-    // Get loyalty account details (support both DB id and Square id)
-    let { data: loyaltyAccount, error: accountError } = await supabase
+    // Get loyalty account details (support both DB id and Square id). Proceed even if not found in DB.
+    let hasDbAccount = false
+    let loyaltyAccount: any = null
+
+    const { data: byId, error: byIdErr } = await supabase
       .from('loyalty_accounts')
       .select('*')
-      .eq('id', loyalty_account_id)
+      .eq('id', loyaltyAccountId)
       .maybeSingle()
 
-    if (!loyaltyAccount) {
-      const fallback = await supabase
+    if (byId) {
+      loyaltyAccount = byId
+      hasDbAccount = true
+    } else {
+      const { data: bySquare, error: bySquareErr } = await supabase
         .from('loyalty_accounts')
         .select('*')
-        .eq('square_loyalty_account_id', loyalty_account_id)
+        .eq('square_loyalty_account_id', loyaltyAccountId)
         .maybeSingle()
-      loyaltyAccount = fallback.data
-      accountError = fallback.error
+      if (bySquare) {
+        loyaltyAccount = bySquare
+        hasDbAccount = true
+      }
     }
 
-    if (accountError || !loyaltyAccount) {
-      console.warn('Loyalty account not found by id or square_loyalty_account_id:', loyalty_account_id)
-      return new Response(
-        JSON.stringify({ error: 'Loyalty account not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    if (!hasDbAccount) {
+      console.warn('Loyalty account not found in DB; will proceed using Square account id only:', loyaltyAccountId)
     }
 
-    // Get reward details
-    const { data: reward, error: rewardError } = await supabase
-      .from('loyalty_rewards')
-      .select('*')
-      .eq('id', reward_id)
-      .single()
+    // Get reward details (allow lookup by DB id or Square reward tier id)
+    let reward: any = null
+    if (rewardId) {
+      const { data, error } = await supabase
+        .from('loyalty_rewards')
+        .select('*')
+        .eq('id', rewardId)
+        .maybeSingle()
+      reward = data
+      if (error) console.error('Reward lookup error by id:', error)
+    }
 
-    if (rewardError || !reward) {
+    if (!reward && rewardTierId) {
+      const { data, error } = await supabase
+        .from('loyalty_rewards')
+        .select('*')
+        .eq('square_reward_id', rewardTierId)
+        .maybeSingle()
+      reward = data
+      if (error) console.error('Reward lookup error by square_reward_id:', error)
+    }
+
+    if (!reward) {
       return new Response(
         JSON.stringify({ error: 'Reward not found' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Check if user has enough points
-    if (loyaltyAccount.balance < reward.points_required) {
+    // Check if user has enough points (only if we have a DB record)
+    if (hasDbAccount && loyaltyAccount.balance < reward.points_required) {
       return new Response(
         JSON.stringify({ error: 'Insufficient points' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -124,7 +146,7 @@ serve(async (req) => {
       body: JSON.stringify({
         idempotency_key: `reward-${Date.now()}-${Math.random()}`,
         reward: {
-          loyalty_account_id: loyaltyAccount.square_loyalty_account_id,
+          loyalty_account_id: (loyaltyAccount?.square_loyalty_account_id || loyaltyAccountId),
           reward_tier_id: reward.square_reward_id
         }
       })
@@ -176,15 +198,18 @@ serve(async (req) => {
     const redeemData = await redeemResponse.json()
     console.log(`Square redeem response:`, JSON.stringify(redeemData, null, 2))
 
-    // Update local loyalty account balance
-    const newBalance = loyaltyAccount.balance - reward.points_required
-    const { error: updateError } = await supabase
-      .from('loyalty_accounts')
-      .update({ balance: newBalance })
-      .eq('id', loyalty_account_id)
+    // Update local loyalty account balance if we have a DB record
+    let newBalance: number | null = null
+    if (hasDbAccount) {
+      newBalance = (loyaltyAccount.balance - reward.points_required)
+      const { error: updateError } = await supabase
+        .from('loyalty_accounts')
+        .update({ balance: newBalance })
+        .eq('id', loyaltyAccount.id)
 
-    if (updateError) {
-      console.error('Error updating loyalty account balance:', updateError)
+      if (updateError) {
+        console.error('Error updating loyalty account balance:', updateError)
+      }
     }
 
     // Create discount code if this is a discount reward
@@ -215,19 +240,21 @@ serve(async (req) => {
       }
     }
 
-    // Record the redemption
-    const { error: redemptionError } = await supabase
-      .from('loyalty_redemptions')
-      .insert({
-        loyalty_account_id: loyalty_account_id,
-        reward_id: reward_id,
-        points_redeemed: reward.points_required,
-        discount_code: discountCode,
-        square_redemption_id: redeemData.reward?.id
-      })
+    // Record the redemption if we have a DB account
+    if (hasDbAccount) {
+      const { error: redemptionError } = await supabase
+        .from('loyalty_redemptions')
+        .insert({
+          loyalty_account_id: loyaltyAccount.id,
+          reward_id: reward.id,
+          points_redeemed: reward.points_required,
+          discount_code: discountCode,
+          square_redemption_id: redeemData.reward?.id
+        })
 
-    if (redemptionError) {
-      console.error('Error recording redemption:', redemptionError)
+      if (redemptionError) {
+        console.error('Error recording redemption:', redemptionError)
+      }
     }
 
     return new Response(
@@ -235,6 +262,7 @@ serve(async (req) => {
         success: true,
         new_balance: newBalance,
         discount_code: discountCode,
+        discountCode: discountCode,
         message: discountCode 
           ? `Reward redeemed! Use code ${discountCode}` 
           : 'Reward redeemed successfully!'

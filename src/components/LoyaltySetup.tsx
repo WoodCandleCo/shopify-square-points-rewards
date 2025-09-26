@@ -11,8 +11,8 @@ const LoyaltySetup = () => {
   const [domain, setDomain] = useState('shopify-square-points-rewards.lovable.app');
   const { toast } = useToast();
 
-  const version = 'v=2025-09-26-02';
-  const scriptCode = `<!-- Loyalty Widget Script (cache-busted) -->\n<script src="https://${domain}/loyalty-widget.js?${version}" defer></script>`;
+  const version = 'v=2025-09-26-03';
+  const scriptCode = `<!-- Loyalty Widget Script (cache-busted) -->\n<script src="https://${domain}/loyalty-widget-production.js?${version}" defer></script>`;
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
