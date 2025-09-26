@@ -44,3 +44,9 @@ verify_jwt = false
 
 [functions.shopify-webhook-orders]
 verify_jwt = false
+
+[functions.loyalty-promotions]
+verify_jwt = false
+
+[functions.loyalty-promotion-redeem]
+verify_jwt = false
