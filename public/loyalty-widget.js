@@ -249,7 +249,7 @@
           <p style="margin: 0 0 8px 0; color: rgba(255, 255, 255, 0.9); font-size: 14px;">Enter phone to access rewards</p>
           <div style="display: flex; gap: 8px; margin-bottom: 8px;">
             <input type="tel" id="loyalty-phone" placeholder="Phone number" style="flex: 1; padding: 12px 16px; border: none; border-radius: 15px; font-size: 14px; background: rgba(255, 255, 255, 0.9); color: #333; outline: none;">
-            <button id="loyalty-connect-btn" style="padding: 12px 20px; background: rgba(255, 255, 255, 0.9); color: #333; border: none; border-radius: 15px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s; white-space: nowrap;">Search</button>
+            <button id="loyalty-connect-btn" style="padding: 12px 20px; background: rgba(255, 255, 255, 0.9); color: #333; border: none; border-radius: 15px; cursor: pointer; font-size: 14px; font-weight: 500; transition: background-color 0.2s; white-space: nowrap; min-width: 90px;">Search</button>
           </div>
           <div id="loyalty-error" style="display: none; color: #fca5a5; font-size: 13px; margin-top: 4px;"></div>
         </div>
