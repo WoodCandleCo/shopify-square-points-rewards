@@ -13,6 +13,7 @@ import MockCheckoutPreview from "@/components/MockCheckoutPreview";
 import LoyaltyWidgetPreview from "@/components/LoyaltyWidgetPreview";
 import LoyaltySetup from "@/components/LoyaltySetup";
 import CombinedProductManager from "@/components/CombinedProductManager";
+import LoyaltyPromotionsManager from "@/components/LoyaltyPromotionsManager";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -242,7 +243,7 @@ const AdminDashboard = () => {
         </div>
 
         <Tabs defaultValue="settings" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="settings" className="flex items-center gap-2">
               <Settings className="w-4 h-4" />
               Settings
@@ -250,6 +251,10 @@ const AdminDashboard = () => {
             <TabsTrigger value="rewards" className="flex items-center gap-2">
               <Gift className="w-4 h-4" />
               Rewards
+            </TabsTrigger>
+            <TabsTrigger value="promotions" className="flex items-center gap-2">
+              <Gift className="w-4 h-4" />
+              Promotions
             </TabsTrigger>
             <TabsTrigger value="mappings" className="flex items-center gap-2">
               <Tag className="w-4 h-4" />
@@ -436,6 +441,10 @@ const AdminDashboard = () => {
                 </Table>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="promotions" className="mt-6">
+            <LoyaltyPromotionsManager />
           </TabsContent>
 
           <TabsContent value="mappings" className="mt-6">
