@@ -29,3 +29,18 @@ verify_jwt = false
 
 [functions.loyalty-redeem]
 verify_jwt = false
+
+[functions.loyalty-identify]
+verify_jwt = false
+
+[functions.loyalty-balance]
+verify_jwt = false
+
+[functions.loyalty-tiers]
+verify_jwt = false
+
+[functions.loyalty-finalize]
+verify_jwt = false
+
+[functions.shopify-webhook-orders]
+verify_jwt = false
