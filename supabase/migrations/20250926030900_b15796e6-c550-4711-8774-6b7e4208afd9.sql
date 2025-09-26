@@ -1,0 +1,1 @@
+UPDATE app_settings SET value = '"production"' WHERE key = 'square_environment';
