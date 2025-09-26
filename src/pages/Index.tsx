@@ -7,9 +7,10 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Load the production loyalty widget
+    // Load the production loyalty widget with cache-busting
     const script = document.createElement('script');
-    script.src = '/loyalty-widget-production.js';
+    const version = String(Math.floor(Date.now() / 1000));
+    script.src = `/loyalty-widget-production.js?v=${version}`;
     script.async = true;
     document.head.appendChild(script);
 
