@@ -123,8 +123,8 @@
     .cart-form .cart-loyalty #loyalty-widget .reward-item button,
     .cart__content .cart-loyalty #loyalty-widget .reward-item button {
       padding: 8px 14px;
-      background: #059669;
-      color: white;
+      background: #FFC857;
+      color: #333;
       border: none;
       border-radius: 6px;
       cursor: pointer;
@@ -140,7 +140,7 @@
     .cart .cart-loyalty #loyalty-widget .reward-item button:hover,
     .cart-form .cart-loyalty #loyalty-widget .reward-item button:hover,
     .cart__content .cart-loyalty #loyalty-widget .reward-item button:hover { 
-      background: #047857 !important; 
+      background: #E6B649 !important; 
     }
 
     .cart-drawer__summary .cart-actions .cart-loyalty #loyalty-widget .reward-item button:disabled,
@@ -267,7 +267,7 @@
         </div>
         <div id="loyalty-account" style="display: none;">
           <div style="margin-bottom: 12px; padding: 10px; background: rgba(255, 255, 255, 0.1); border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.2);">
-            <p style="margin: 0; font-weight: 500; color: white; font-size: 14px;">Points Balance: <span id="loyalty-balance" style="color: #10b981;">0</span></p>
+            <p style="margin: 0; font-weight: 500; color: white; font-size: 14px;">Points Balance: <span id="loyalty-balance" style="color: #10b981; font-weight: 700; font-size: 16px;">0</span></p>
           </div>
           <div id="loyalty-rewards">
             <p style="margin: 0 0 8px 0; font-weight: 500; color: white; font-size: 14px;">Available Rewards:</p>
