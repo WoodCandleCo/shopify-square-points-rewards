@@ -19,29 +19,21 @@ serve(async (req) => {
     const url = new URL(req.url)
     const customerId = url.searchParams.get('customerId')
     const loyaltyAccountId = url.searchParams.get('loyaltyAccountId')
+    const programId = url.searchParams.get('programId')
 
-    if (!customerId && !loyaltyAccountId) {
-      return new Response(
-        JSON.stringify({ error: 'customerId or loyaltyAccountId parameter is required' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
-    }
-
-    // Get environment variables
     const SQUARE_ACCESS_TOKEN = Deno.env.get('SQUARE_ACCESS_TOKEN')
     const SQUARE_LOYALTY_PROGRAM_ID = Deno.env.get('SQUARE_LOYALTY_PROGRAM_ID')
 
-    if (!SQUARE_ACCESS_TOKEN || !SQUARE_LOYALTY_PROGRAM_ID) {
-      throw new Error('Square configuration not complete')
+    if (!SQUARE_ACCESS_TOKEN) {
+      throw new Error('Square access token not configured')
     }
 
-    // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get Square environment setting
+    // Get environment setting
     const { data: settingData } = await supabase
       .from('app_settings')
       .select('value')
@@ -61,46 +53,37 @@ serve(async (req) => {
       ? 'https://connect.squareup.com'
       : 'https://connect.squareupsandbox.com'
 
-    console.log(`Fetching promotions for customer in ${environment} environment`)
+    console.log(`Fetching promotions in ${environment} environment`)
 
-    // Get customer's loyalty account if only customerId is provided
-    let actualLoyaltyAccountId = loyaltyAccountId
-    
-    if (!actualLoyaltyAccountId && customerId) {
-      const loyaltySearchResponse = await fetch(`${baseUrl}/v2/loyalty/accounts/search`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${SQUARE_ACCESS_TOKEN}`,
-          'Square-Version': '2024-01-18',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          query: {
-            customer_ids: [customerId]
+    // Get customer info for birthday promotions
+    let customerInfo = null
+    if (customerId) {
+      try {
+        const customerResponse = await fetch(`${baseUrl}/v2/customers/${customerId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${SQUARE_ACCESS_TOKEN}`,
+            'Content-Type': 'application/json',
+            'Square-Version': '2024-10-17'
           }
         })
-      })
 
-      if (loyaltySearchResponse.ok) {
-        const loyaltyData = await loyaltySearchResponse.json()
-        actualLoyaltyAccountId = loyaltyData.loyalty_accounts?.[0]?.id
+        if (customerResponse.ok) {
+          const customerData = await customerResponse.json()
+          customerInfo = customerData.customer
+        }
+      } catch (error) {
+        console.warn('Could not fetch customer info:', error)
       }
     }
 
-    if (!actualLoyaltyAccountId) {
-      return new Response(
-        JSON.stringify({ error: 'Loyalty account not found' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
-      )
-    }
-
-    // Fetch loyalty promotions for the program
+    // Fetch all active loyalty promotions
     const promotionsResponse = await fetch(`${baseUrl}/v2/loyalty/promotions`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${SQUARE_ACCESS_TOKEN}`,
-        'Square-Version': '2024-01-18',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Square-Version': '2024-10-17'
       }
     })
 
@@ -113,13 +96,15 @@ serve(async (req) => {
     const promotionsData = await promotionsResponse.json()
     const allPromotions = promotionsData.loyalty_promotions || []
 
-    // Filter promotions for this loyalty program and that are currently active
+    // Filter for active promotions in the correct program
+    const targetProgramId = programId || SQUARE_LOYALTY_PROGRAM_ID
     const currentDate = new Date()
+    
     const activePromotions = allPromotions.filter((promo: any) => {
-      const isCorrectProgram = promo.loyalty_program_id === SQUARE_LOYALTY_PROGRAM_ID
+      const isCorrectProgram = promo.loyalty_program_id === targetProgramId
       const isActive = promo.status === 'ACTIVE'
       
-      // Check if promotion is currently valid (within date range)
+      // Check date range
       let isInDateRange = true
       if (promo.available_time) {
         const startTime = promo.available_time.start_date ? new Date(promo.available_time.start_date) : null
@@ -132,73 +117,73 @@ serve(async (req) => {
       return isCorrectProgram && isActive && isInDateRange
     })
 
-    // Get customer information to check for birthday promotions
-    let customerInfo = null
-    if (customerId) {
-      const customerResponse = await fetch(`${baseUrl}/v2/customers/${customerId}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${SQUARE_ACCESS_TOKEN}`,
-          'Square-Version': '2024-01-18',
-          'Content-Type': 'application/json'
+    console.log(`Found ${activePromotions.length} active promotions`)
+
+    // Check customer eligibility for each promotion
+    const eligiblePromotions = activePromotions.map((promo: any) => {
+      let customerEligible = false
+      let eligibilityReason = null
+
+      // Check for birthday promotions
+      if (customerInfo?.birthday && promo.name?.toLowerCase().includes('birthday')) {
+        const birthday = new Date(customerInfo.birthday)
+        const isBirthdayMonth = birthday.getMonth() === currentDate.getMonth()
+        
+        if (isBirthdayMonth) {
+          customerEligible = true
+          eligibilityReason = 'birthday_month'
         }
-      })
-
-      if (customerResponse.ok) {
-        const customerData = await customerResponse.json()
-        customerInfo = customerData.customer
       }
-    }
 
-    // Check for customer-specific promotions (like birthday)
-    const customerSpecificPromotions: any[] = []
-    const today = new Date()
-    
-    if (customerInfo && customerInfo.birthday) {
-      const birthday = new Date(customerInfo.birthday)
-      const isBirthdayMonth = birthday.getMonth() === today.getMonth()
-      
-      // Look for birthday promotions
-      const birthdayPromotions = activePromotions.filter((promo: any) => 
-        promo.name && promo.name.toLowerCase().includes('birthday')
-      )
-      
-      if (isBirthdayMonth && birthdayPromotions.length > 0) {
-        customerSpecificPromotions.push(...birthdayPromotions.map((promo: any) => ({
-          ...promo,
-          customer_eligible: true,
-          eligibility_reason: 'birthday_month'
-        })))
+      // Check for general promotions (no specific eligibility criteria)
+      if (!promo.name?.toLowerCase().includes('birthday')) {
+        customerEligible = true
+        eligibilityReason = 'general_promotion'
       }
-    }
 
-    // Format promotions for response
-    const formattedPromotions = activePromotions.map((promo: any) => {
-      const isCustomerSpecific = customerSpecificPromotions.some(cp => cp.id === promo.id)
+      // Format incentive value
+      let incentiveValue = null
+      let incentiveType = null
       
+      if (promo.incentive) {
+        if (promo.incentive.type === 'PERCENTAGE_DISCOUNT') {
+          incentiveType = 'PERCENTAGE_DISCOUNT'
+          incentiveValue = promo.incentive.percentage_discount
+        } else if (promo.incentive.type === 'FIXED_DISCOUNT') {
+          incentiveType = 'FIXED_DISCOUNT'
+          incentiveValue = promo.incentive.fixed_discount_money
+        }
+      }
+
       return {
         id: promo.id,
         name: promo.name,
         status: promo.status,
         description: promo.incentive?.type || 'Special promotion',
-        incentive_type: promo.incentive?.type,
-        incentive_value: promo.incentive?.percentage_discount || promo.incentive?.fixed_discount_money,
+        incentive_type: incentiveType,
+        incentive_value: incentiveValue,
         available_time: promo.available_time,
-        customer_eligible: isCustomerSpecific,
-        eligibility_reason: isCustomerSpecific ? 
-          customerSpecificPromotions.find(cp => cp.id === promo.id)?.eligibility_reason : null,
+        customer_eligible: customerEligible,
+        eligibility_reason: eligibilityReason,
         minimum_spend: promo.minimum_spend_amount_money,
-        maximum_discount: promo.qualifying_category_ids ? null : promo.incentive?.fixed_discount_money
+        maximum_discount: promo.qualifying_category_ids ? null : promo.incentive?.fixed_discount_money,
+        loyalty_program_id: promo.loyalty_program_id
       }
     })
 
+    const customerSpecificCount = eligiblePromotions.filter(p => p.customer_eligible).length
+
     return new Response(
       JSON.stringify({
-        promotions: formattedPromotions,
-        customer_specific_count: customerSpecificPromotions.length,
+        promotions: eligiblePromotions,
+        customer_specific_count: customerSpecificCount,
         total_active_promotions: activePromotions.length,
         environment,
-        loyalty_account_id: actualLoyaltyAccountId
+        customer_info: customerInfo ? {
+          id: customerInfo.id,
+          has_birthday: !!customerInfo.birthday,
+          birthday_month: customerInfo.birthday ? new Date(customerInfo.birthday).getMonth() : null
+        } : null
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -25,22 +25,17 @@ serve(async (req) => {
       )
     }
 
-    // Get environment variables
     const SQUARE_ACCESS_TOKEN = Deno.env.get('SQUARE_ACCESS_TOKEN')
-    const SHOP_NAME = Deno.env.get('SHOP_NAME')
-    const SHOPIFY_ADMIN_TOKEN = Deno.env.get('SHOPIFY_ADMIN_TOKEN')
-
     if (!SQUARE_ACCESS_TOKEN) {
       throw new Error('Square access token not configured')
     }
 
-    // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get Square environment setting
+    // Get environment setting
     const { data: settingData } = await supabase
       .from('app_settings')
       .select('value')
@@ -67,8 +62,8 @@ serve(async (req) => {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${SQUARE_ACCESS_TOKEN}`,
-        'Square-Version': '2024-01-18',
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Square-Version': '2024-10-17'
       }
     })
 
@@ -81,47 +76,21 @@ serve(async (req) => {
     const promotionData = await promotionResponse.json()
     const promotion = promotionData.loyalty_promotion
 
-    // Create a loyalty reward for this promotion
-    const createRewardPayload = {
-      reward: {
-        loyalty_account_id: loyaltyAccountId,
-        reward_tier_id: null, // For promotions, we don't use tier_id
-        promotion_id: promotionId
-      },
-      idempotency_key: `promotion-${promotionId}-${loyaltyAccountId}-${Date.now()}`
-    }
-
-    const createRewardResponse = await fetch(`${baseUrl}/v2/loyalty/rewards`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${SQUARE_ACCESS_TOKEN}`,
-        'Square-Version': '2024-01-18',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(createRewardPayload)
-    })
-
-    if (!createRewardResponse.ok) {
-      const errorText = await createRewardResponse.text()
-      console.error(`Square promotion reward creation failed: ${createRewardResponse.status} - ${errorText}`)
-      return new Response(
-        JSON.stringify({ error: 'Failed to create promotion reward in Square', details: errorText }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-      )
-    }
-
-    const rewardData = await createRewardResponse.json()
-    const squareRewardId = rewardData.reward.id
-
-    console.log(`Created Square promotion reward: ${squareRewardId}`)
-
     // Create Shopify discount code for the promotion
-    let discountCode = null
+    let discountCode = `PROMO${Math.random().toString(36).substring(2, 8).toUpperCase()}`
     
-    if (SHOP_NAME && SHOPIFY_ADMIN_TOKEN) {
+    // Get Shopify credentials
+    let shopifyStoreUrl = Deno.env.get('SHOPIFY_STORE_URL')
+    const shopifyAccessToken = Deno.env.get('SHOPIFY_ACCESS_TOKEN')
+
+    if (shopifyStoreUrl && shopifyAccessToken) {
       try {
+        // Clean up store URL
+        shopifyStoreUrl = shopifyStoreUrl.replace(/^https?:\/\//, '')
+        shopifyStoreUrl = shopifyStoreUrl.replace(/\/$/, '')
+
         // Determine discount values from promotion incentive
-        let discountValue = '10' // Default 10% off
+        let discountValue = '10'
         let valueType = 'percentage'
         let minimumAmount = null
 
@@ -141,10 +110,13 @@ serve(async (req) => {
           minimumAmount = (promotion.minimum_spend_amount_money.amount / 100).toString()
         }
 
-        // Create the price rule
+        // Create unique discount code for this promotion redemption
+        discountCode = `${promotion.name?.replace(/\s+/g, '').substring(0, 8).toUpperCase() || 'PROMO'}${Date.now().toString().slice(-6)}`
+
+        // Create price rule
         const priceRulePayload: any = {
           price_rule: {
-            title: `Square Loyalty Promotion - ${promotion.name}`,
+            title: `${promotion.name} - ${discountCode}`,
             target_type: 'line_item',
             target_selection: 'all',
             allocation_method: 'across',
@@ -152,23 +124,30 @@ serve(async (req) => {
             value: valueType === 'fixed_amount' ? `-${discountValue}` : `-${discountValue}`,
             customer_selection: 'all',
             starts_at: new Date().toISOString(),
-            ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+            ends_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days
             usage_limit: 1,
             once_per_customer: true
           }
         }
 
-        // Add minimum amount if specified
+        // Add minimum spend requirement
         if (minimumAmount) {
           priceRulePayload.price_rule.prerequisite_subtotal_range = {
             greater_than_or_equal_to: minimumAmount
           }
         }
 
-        const priceRuleResponse = await fetch(`https://${SHOP_NAME}/admin/api/2024-10/price_rules.json`, {
+        // Add maximum discount for percentage discounts
+        if (valueType === 'percentage' && promotion.incentive?.fixed_discount_money?.amount) {
+          priceRulePayload.price_rule.allocation_limit = (promotion.incentive.fixed_discount_money.amount / 100).toString()
+        }
+
+        console.log('Creating promotion price rule:', JSON.stringify(priceRulePayload, null, 2))
+
+        const priceRuleResponse = await fetch(`https://${shopifyStoreUrl}/admin/api/2024-10/price_rules.json`, {
           method: 'POST',
           headers: {
-            'X-Shopify-Access-Token': SHOPIFY_ADMIN_TOKEN,
+            'X-Shopify-Access-Token': shopifyAccessToken,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(priceRulePayload)
@@ -183,18 +162,17 @@ serve(async (req) => {
         const priceRuleData = await priceRuleResponse.json()
         const priceRuleId = priceRuleData.price_rule.id
 
-        // Create the discount code with unique identifier
-        const uniqueCode = `PROMO-${squareRewardId.slice(0, 8)}`
+        // Create discount code
         const discountCodePayload = {
           discount_code: {
-            code: uniqueCode
+            code: discountCode
           }
         }
 
-        const discountCodeResponse = await fetch(`https://${SHOP_NAME}/admin/api/2024-10/price_rules/${priceRuleId}/discount_codes.json`, {
+        const discountCodeResponse = await fetch(`https://${shopifyStoreUrl}/admin/api/2024-10/price_rules/${priceRuleId}/discount_codes.json`, {
           method: 'POST',
           headers: {
-            'X-Shopify-Access-Token': SHOPIFY_ADMIN_TOKEN,
+            'X-Shopify-Access-Token': shopifyAccessToken,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify(discountCodePayload)
@@ -206,56 +184,46 @@ serve(async (req) => {
           throw new Error(`Discount code creation failed: ${errorText}`)
         }
 
-        const discountCodeData = await discountCodeResponse.json()
-        discountCode = discountCodeData.discount_code.code
-
-        console.log(`Created Shopify promotion discount code: ${discountCode}`)
+        console.log(`Created promotion discount code: ${discountCode}`)
 
       } catch (shopifyError: any) {
         console.error('Shopify discount creation failed:', shopifyError)
-        
-        // If Shopify fails, we should delete the Square reward to clean up
-        try {
-          await fetch(`${baseUrl}/v2/loyalty/rewards/${squareRewardId}`, {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${SQUARE_ACCESS_TOKEN}`,
-              'Square-Version': '2024-01-18',
-              'Content-Type': 'application/json'
-            }
-          })
-          console.log(`Deleted Square reward ${squareRewardId} due to Shopify error`)
-        } catch (deleteError) {
-          console.error('Failed to cleanup Square reward:', deleteError)
-        }
-        
         return new Response(
           JSON.stringify({ error: 'Failed to create promotion discount code', details: shopifyError.message }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
         )
       }
+    } else {
+      console.warn('Shopify credentials not configured, cannot create discount codes')
     }
 
-    // Store promotion redemption record in Supabase for tracking
+    // Record promotion redemption
     try {
-      await supabase
-        .from('loyalty_transactions')
-        .insert({
-          user_id: null, // Will be updated when we have user context
-          loyalty_account_id: null, // Will be updated when we have internal account
-          transaction_type: 'promotion_redemption',
-          points: 0, // Promotions don't typically cost points
-          description: `Redeemed promotion: ${promotion.name}`,
-          square_transaction_id: squareRewardId
-        })
+      const { data: loyaltyAccount } = await supabase
+        .from('loyalty_accounts')
+        .select('*')
+        .eq('square_loyalty_account_id', loyaltyAccountId)
+        .single()
+
+      if (loyaltyAccount) {
+        await supabase
+          .from('loyalty_transactions')
+          .insert({
+            user_id: loyaltyAccount.user_id,
+            loyalty_account_id: loyaltyAccount.id,
+            transaction_type: 'REDEEM',
+            points: 0, // Promotions typically don't cost points
+            description: `Redeemed promotion: ${promotion.name}`,
+            square_transaction_id: `promo-${promotionId}`
+          })
+      }
     } catch (dbError) {
       console.error('Failed to record promotion redemption:', dbError)
-      // Don't fail the request for this, just log it
     }
 
     return new Response(
       JSON.stringify({ 
-        rewardId: squareRewardId,
+        rewardId: `promo-${promotionId}`,
         discountCode,
         promotion: {
           id: promotion.id,

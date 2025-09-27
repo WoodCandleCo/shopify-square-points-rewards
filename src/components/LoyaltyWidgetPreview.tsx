@@ -67,20 +67,65 @@ const LoyaltyWidgetPreview = () => {
     if (!phoneNumber) return;
     
     setIsLoading(true);
-    setTimeout(() => {
-      // Mock successful connection
+    
+    try {
+      // Use actual loyalty lookup function
+      const response = await fetch(`${window.location.origin}/api/loyalty/lookup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phone: phoneNumber,
+          customer_id: 'demo_customer_123',
+          email: 'demo@example.com'
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.loyalty_account) {
+          setLoyaltyAccount({
+            id: data.loyalty_account.id,
+            balance: data.loyalty_account.balance,
+            lifetime_points: data.loyalty_account.points_earned_lifetime
+          });
+          toast({
+            title: "Account Connected",
+            description: `Connected with ${data.loyalty_account.balance} points balance`
+          });
+        } else {
+          throw new Error('No loyalty account found');
+        }
+      } else {
+        // Fallback to demo data for preview
+        const mockAccount = {
+          id: 'demo_account',
+          balance: 785,
+          lifetime_points: 1250
+        };
+        setLoyaltyAccount(mockAccount);
+        toast({
+          title: "Demo Account Connected",
+          description: `Demo mode - ${mockAccount.balance} points balance`
+        });
+      }
+    } catch (error) {
+      console.error('Error connecting account:', error);
+      // Fallback to demo data
       const mockAccount = {
         id: 'demo_account',
         balance: 785,
         lifetime_points: 1250
       };
       setLoyaltyAccount(mockAccount);
-      setIsLoading(false);
       toast({
         title: "Demo Account Connected",
-        description: `Connected with ${mockAccount.balance} points balance`
+        description: `Demo mode - ${mockAccount.balance} points balance`
       });
-    }, 1000);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const redeemReward = (reward: any) => {

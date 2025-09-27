@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.loyalty-promotion-redeem]
 verify_jwt = false
+
+[functions.loyalty-accumulate-points]
+verify_jwt = false

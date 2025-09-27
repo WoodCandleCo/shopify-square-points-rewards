@@ -88,14 +88,16 @@ export function useAppSettings() {
 
   const testSquareConnection = async () => {
     try {
-      const { data, error } = await supabase.functions.invoke('square-test-connection');
+      const { data, error } = await supabase.functions.invoke('square-test-connection', {
+        body: {}
+      });
 
       if (error) throw error;
 
       if (data?.success) {
         toast({
           title: "Connection successful",
-          description: `Square API connection working in ${data.environment} environment. Found ${data.locations} locations.`
+          description: `Square API connection working in ${data.environment} environment. Found ${data.locations || 0} locations.`
         });
         return true;
       } else {
@@ -103,10 +105,10 @@ export function useAppSettings() {
       }
     } catch (error: any) {
       console.error('Square connection test failed:', error);
-      const details = error?.context?.error || error?.message || 'Unknown error';
+      const details = error?.message || 'Unknown error';
       toast({
         title: "Connection failed",
-        description: typeof details === 'string' ? details : 'Could not connect to Square API. Check your credentials and environment setting.',
+        description: 'Could not connect to Square API. Check your credentials and environment setting.',
         variant: "destructive"
       });
       return false;

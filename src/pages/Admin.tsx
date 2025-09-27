@@ -96,14 +96,16 @@ const AdminDashboard = () => {
   const syncRewardsFromSquare = async () => {
     setLoadingRewards(true);
     try {
-      const { data, error } = await supabase.functions.invoke('sync-square-rewards');
+      const { data, error } = await supabase.functions.invoke('sync-square-rewards', {
+        body: {}
+      });
 
       if (error) throw error;
 
       if (data?.success) {
         toast({
           title: "Rewards synced",
-          description: `Successfully synced ${data.count} rewards from Square.`
+          description: `Successfully synced ${data.count || 0} rewards from Square in ${data.environment} environment.`
         });
         loadRewards(); // Reload the rewards table
       } else {
@@ -147,7 +149,21 @@ const AdminDashboard = () => {
   };
 
   const handleTestConnection = async () => {
-    await testSquareConnection();
+    const success = await testSquareConnection();
+    if (success) {
+      // Also test Shopify connection
+      try {
+        const { data, error } = await supabase.functions.invoke('test-shopify-config');
+        if (data?.success) {
+          toast({
+            title: "Shopify connection verified",
+            description: `Store: ${data.store_url}, Token: ${data.has_access_token ? 'Valid' : 'Missing'}`
+          });
+        }
+      } catch (shopifyError) {
+        console.error('Shopify test failed:', shopifyError);
+      }
+    }
   };
 
   const handleSettingChange = (key: string, value: any) => {

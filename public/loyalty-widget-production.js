@@ -1,562 +1,925 @@
 /**
- * Production Square Loyalty Widget
- * Implements the exact API structure requested for customer loyalty integration
+ * Production Square Loyalty Widget for Shopify Basic Plan
+ * Optimized for cart drawer and cart page integration
  */
 
 (function() {
   'use strict';
 
+  // Configuration
+  const API_BASE_URL = 'https://oxsxkwrsbpcmwghfmooz.supabase.co/functions/v1';
+  const WIDGET_ID = 'square-loyalty-widget';
+  
+  // Widget state
+  let isWidgetLoaded = false;
+  let currentCustomerData = null;
+  let loyaltyData = null;
+  let isProcessingRedemption = false;
+
   // Utility function to normalize phone to E.164 format
   function normalizePhoneToE164(phone) {
     if (!phone) return null;
     
-    // Remove all non-digit characters
     const digits = phone.replace(/\D/g, '');
     
-    // If it starts with 1 and has 11 digits, assume US/Canada
     if (digits.length === 11 && digits.startsWith('1')) {
       return '+' + digits;
     }
     
-    // If it has 10 digits, assume US/Canada and add country code
     if (digits.length === 10) {
       return '+1' + digits;
     }
     
-    // If it already starts with + keep as is
     if (phone.startsWith('+')) {
       return phone;
     }
     
-    // Default: add + to the beginning
     return '+' + digits;
   }
 
-  // Validate E.164 format
-  function isValidE164(phone) {
-    const e164Regex = /^\+[1-9]\d{1,14}$/;
-    return e164Regex.test(phone);
+  // Enhanced CSS for better Shopify integration
+  const WIDGET_CSS = `
+    .square-loyalty-widget {
+      font-family: var(--font-body-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 12px;
+      padding: 16px 18px;
+      margin: 16px 0;
+      color: white;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .loyalty-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 14px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: white;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .loyalty-content {
+      padding-top: 8px;
+    }
+
+    .loyalty-loading {
+      text-align: center;
+      padding: 16px 0;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .loyalty-loading .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 8px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loyalty-form {
+      margin-bottom: 12px;
+    }
+
+    .loyalty-form p {
+      margin: 0 0 8px 0;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 14px;
+    }
+
+    .loyalty-input-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .loyalty-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 15px;
+      font-size: 14px;
+      background: rgba(255, 255, 255, 0.9);
+      color: #333;
+      outline: none;
+      text-transform: none;
+    }
+
+    .loyalty-input::placeholder {
+      color: rgba(0, 0, 0, 0.5);
+      text-transform: none;
+    }
+
+    .loyalty-button {
+      padding: 12px 20px;
+      background: rgba(255, 255, 255, 0.9);
+      color: #333;
+      border: none;
+      border-radius: 15px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background-color 0.2s;
+      white-space: nowrap;
+      min-width: 90px;
+      text-transform: uppercase;
+    }
+
+    .loyalty-button:hover {
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    .loyalty-button:disabled {
+      background: rgba(255, 255, 255, 0.5);
+      cursor: not-allowed;
+    }
+
+    .loyalty-button.primary {
+      background: #059669;
+      color: white;
+    }
+
+    .loyalty-button.primary:hover {
+      background: #047857;
+    }
+
+    .loyalty-button.secondary {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+
+    .loyalty-error {
+      color: #fca5a5;
+      font-size: 13px;
+      margin-top: 4px;
+      display: none;
+    }
+
+    .loyalty-account {
+      display: none;
+    }
+
+    .loyalty-balance {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+      padding: 10px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .loyalty-balance-item {
+      text-align: center;
+    }
+
+    .loyalty-balance-label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.7);
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .loyalty-balance-value {
+      font-size: 16px;
+      font-weight: 700;
+      color: #10b981;
+    }
+
+    .loyalty-section {
+      margin-bottom: 16px;
+    }
+
+    .loyalty-section-title {
+      font-size: 14px;
+      font-weight: 500;
+      color: white;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+
+    .loyalty-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      margin: 4px 0;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      transition: border-color 0.2s;
+    }
+
+    .loyalty-item:hover {
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+
+    .loyalty-item-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      flex: 1;
+      min-width: 0;
+      margin-right: 12px;
+    }
+
+    .loyalty-item-name {
+      font-weight: 500;
+      color: white;
+      font-size: 13px;
+      margin: 0;
+      line-height: 1.2;
+      flex: 1;
+      text-transform: uppercase;
+    }
+
+    .loyalty-item-points {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 11px;
+      margin: 0;
+      line-height: 1.2;
+      white-space: nowrap;
+      margin-left: 8px;
+      text-transform: uppercase;
+    }
+
+    .loyalty-item-button {
+      padding: 8px 14px;
+      background: #FFC857;
+      color: #333;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background-color 0.2s;
+      white-space: nowrap;
+      margin-left: 12px;
+      text-transform: uppercase;
+    }
+
+    .loyalty-item-button:hover {
+      background: #E6B649;
+    }
+
+    .loyalty-item-button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
+    .loyalty-item-button.promotion {
+      background: #ff6b6b;
+      color: white;
+    }
+
+    .loyalty-item-button.promotion:hover {
+      background: #ff5252;
+    }
+
+    .loyalty-item-button.birthday {
+      background: #ff69b4;
+      color: white;
+    }
+
+    .loyalty-item-button.birthday:hover {
+      background: #ff1493;
+    }
+
+    .loyalty-no-items {
+      text-align: center;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 13px;
+      padding: 12px;
+      font-style: italic;
+    }
+
+    .loyalty-signup {
+      display: none;
+    }
+
+    .loyalty-signup p {
+      margin: 0 0 8px 0;
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 14px;
+    }
+
+    .loyalty-signup-form {
+      margin-bottom: 8px;
+    }
+
+    .loyalty-signup-form input {
+      width: 100%;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 15px;
+      font-size: 14px;
+      background: rgba(255, 255, 255, 0.9);
+      color: #333;
+      outline: none;
+      margin-bottom: 8px;
+      text-transform: none;
+    }
+
+    .loyalty-signup-buttons {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+  `;
+
+  // Widget HTML template
+  const WIDGET_HTML = `
+    <div class="square-loyalty-widget">
+      <div class="loyalty-header">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="20,12 20,22 4,22 4,12"></polyline>
+          <rect width="20" height="5" x="2" y="7"></rect>
+          <line x1="12" x2="12" y1="22" y2="7"></line>
+          <path d="m12 7 3-3H9l3 3z"></path>
+        </svg>
+        Loyalty Rewards
+      </div>
+      <div class="loyalty-content">
+        <div class="loyalty-loading" id="loyalty-loading">
+          <div class="spinner"></div>
+          <p>Loading your rewards...</p>
+        </div>
+        <div class="loyalty-form" id="loyalty-login" style="display: none;">
+          <p>Enter phone to access rewards</p>
+          <div class="loyalty-input-group">
+            <input type="tel" id="loyalty-phone" class="loyalty-input" placeholder="Phone number">
+            <button id="loyalty-connect-btn" class="loyalty-button">Search</button>
+          </div>
+          <div class="loyalty-error" id="loyalty-error"></div>
+        </div>
+        <div class="loyalty-signup" id="loyalty-signup">
+          <p>Create a loyalty account to start earning rewards</p>
+          <div class="loyalty-signup-form">
+            <input type="email" id="loyalty-email" placeholder="Email address">
+            <input type="tel" id="loyalty-signup-phone" placeholder="Phone number">
+          </div>
+          <div class="loyalty-signup-buttons">
+            <button id="loyalty-signup-btn" class="loyalty-button primary">Create Account</button>
+            <button id="loyalty-back-btn" class="loyalty-button secondary">Back</button>
+          </div>
+          <div class="loyalty-error" id="loyalty-signup-error"></div>
+        </div>
+        <div class="loyalty-account" id="loyalty-account">
+          <div class="loyalty-balance">
+            <div class="loyalty-balance-item">
+              <div class="loyalty-balance-label">Balance</div>
+              <div class="loyalty-balance-value" id="loyalty-balance">0</div>
+            </div>
+            <div class="loyalty-balance-item">
+              <div class="loyalty-balance-label">Lifetime</div>
+              <div class="loyalty-balance-value" id="loyalty-lifetime">0</div>
+            </div>
+          </div>
+          <div class="loyalty-section" id="promotions-section" style="display: none;">
+            <div class="loyalty-section-title">🎉 Special Promotions</div>
+            <div id="loyalty-promotions-list"></div>
+          </div>
+          <div class="loyalty-section">
+            <div class="loyalty-section-title">🏆 Available Rewards</div>
+            <div id="loyalty-rewards-list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Initialize widget
+  function initLoyaltyWidget() {
+    if (isWidgetLoaded) return;
+    
+    // Add CSS
+    const style = document.createElement('style');
+    style.textContent = WIDGET_CSS;
+    document.head.appendChild(style);
+
+    // Find and inject widget
+    insertWidget();
   }
 
-  // API wrapper functions matching the specified endpoints
-  const LoyaltyAPI = {
-    // 1) POST /api/loyalty/identify (using Supabase edge function)
-    async identify(phone, email) {
-      const e164Phone = phone ? normalizePhoneToE164(phone) : null;
-      
-      if (e164Phone && !isValidE164(e164Phone)) {
-        throw new Error('Invalid phone number format. Please use international format (e.g., +1234567890)');
-      }
+  // Find cart container and inject widget
+  function insertWidget() {
+    if (document.getElementById(WIDGET_ID)) return;
 
-      const response = await fetch('https://oxsxkwrsbpcmwghfmooz.supabase.co/functions/v1/loyalty-identify', {
+    const containerSelectors = [
+      '.cart-drawer__summary .cart-actions',
+      '.cart-actions',
+      '.cart__summary',
+      '.cart__footer',
+      '.cart-footer',
+      '.cart__content',
+      '.cart-form',
+      '.cart'
+    ];
+
+    let container = null;
+    for (const selector of containerSelectors) {
+      const element = document.querySelector(selector);
+      if (element) {
+        container = element;
+        console.log(`Found cart container: ${selector}`);
+        break;
+      }
+    }
+
+    if (!container) {
+      console.log('No suitable cart container found');
+      return;
+    }
+
+    // Create widget element
+    const widget = document.createElement('div');
+    widget.id = WIDGET_ID;
+    widget.innerHTML = WIDGET_HTML;
+
+    // Insert widget at appropriate position
+    const insertionPoints = [
+      container.querySelector('.cart-note, .cart__note, [data-cart-note]'),
+      container.querySelector('.cart-discount, .discount-form'),
+      container.querySelector('.cart__footer, .cart-footer'),
+      container.querySelector('.cart__buttons, .cart-buttons')
+    ];
+
+    const insertionPoint = insertionPoints.find(el => el !== null);
+    
+    if (insertionPoint) {
+      insertionPoint.parentNode.insertBefore(widget, insertionPoint);
+    } else {
+      // Fallback: insert at beginning of container
+      container.insertBefore(widget, container.firstChild);
+    }
+
+    // Bind events and load data
+    bindEvents();
+    loadCustomerData();
+    isWidgetLoaded = true;
+    
+    console.log('Square loyalty widget loaded successfully');
+  }
+
+  // Bind event listeners
+  function bindEvents() {
+    const connectBtn = document.getElementById('loyalty-connect-btn');
+    const phoneInput = document.getElementById('loyalty-phone');
+    const signupBtn = document.getElementById('loyalty-signup-btn');
+    const backBtn = document.getElementById('loyalty-back-btn');
+    const emailInput = document.getElementById('loyalty-email');
+    const signupPhoneInput = document.getElementById('loyalty-signup-phone');
+
+    if (connectBtn) {
+      connectBtn.addEventListener('click', connectLoyalty);
+    }
+
+    if (phoneInput) {
+      phoneInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          connectLoyalty();
+        }
+      });
+    }
+
+    if (signupBtn) {
+      signupBtn.addEventListener('click', createLoyaltyAccount);
+    }
+
+    if (backBtn) {
+      backBtn.addEventListener('click', showLoyaltyLogin);
+    }
+
+    if (emailInput) {
+      emailInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          createLoyaltyAccount();
+        }
+      });
+    }
+
+    if (signupPhoneInput) {
+      signupPhoneInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+          createLoyaltyAccount();
+        }
+      });
+    }
+  }
+
+  // Load customer data from Shopify
+  function loadCustomerData() {
+    if (window.Shopify && window.Shopify.customer) {
+      currentCustomerData = window.Shopify.customer;
+      checkExistingLoyaltyAccount();
+    } else {
+      showLoyaltyLogin();
+    }
+  }
+
+  // Check for existing loyalty account
+  async function checkExistingLoyaltyAccount() {
+    if (!currentCustomerData) {
+      showLoyaltyLogin();
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/loyalty-account`, {
         method: 'POST',
-        headers: { 
+        headers: {
           'Content-Type': 'application/json',
           'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3hrd3JzYnBjbXdnaGZtb296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNjE2MzksImV4cCI6MjA3MzczNzYzOX0.re0nwcRGwcvwl8F3Eu1C1g-P3QEwOtNFpK6MGrlL7ek'
         },
-        body: JSON.stringify({ phone: e164Phone, email })
+        body: JSON.stringify({
+          customer_id: currentCustomerData.id.toString(),
+          email: currentCustomerData.email
+        })
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to identify customer');
-      }
-
-      return response.json();
-    },
-
-    // 2) GET /api/loyalty/balance?accountId=... (using Supabase edge function)
-    async getBalance(accountId) {
-      const response = await fetch(`https://oxsxkwrsbpcmwghfmooz.supabase.co/functions/v1/loyalty-balance?accountId=${encodeURIComponent(accountId)}`, {
-        headers: { 
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3hrd3JzYnBjbXdnaGZtb296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNjE2MzksImV4cCI6MjA3MzczNzYzOX0.re0nwcRGwcvwl8F3Eu1C1g-P3QEwOtNFpK6MGrlL7ek'
-        }
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to get balance');
-      }
-
-      return response.json();
-    },
-
-    // 3) GET /api/loyalty/tiers?programId=... (using Supabase edge function)
-    async getTiers(programId) {
-      const response = await fetch(`https://oxsxkwrsbpcmwghfmooz.supabase.co/functions/v1/loyalty-tiers?programId=${encodeURIComponent(programId)}`, {
-        headers: { 
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3hrd3JzYnBjbXdnaGZtb296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNjE2MzksImV4cCI6MjA3MzczNzYzOX0.re0nwcRGwcvwl8F3Eu1C1g-P3QEwOtNFpK6MGrlL7ek'
-        }
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to get tiers');
-      }
-
-      return response.json();
-    },
-
-    // 4) GET /api/loyalty/promotions?programId=... (using Supabase edge function)
-    async getPromotions(programId, customerId, loyaltyAccountId) {
-      const url = new URL('https://oxsxkwrsbpcmwghfmooz.supabase.co/functions/v1/loyalty-promotions');
-      if (programId) url.searchParams.set('programId', programId);
-      if (customerId) url.searchParams.set('customerId', customerId);
-      if (loyaltyAccountId) url.searchParams.set('loyaltyAccountId', loyaltyAccountId);
-      
-      const response = await fetch(url, {
-        headers: { 
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3hrd3JzYnBjbXdnaGZtb296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNjE2MzksImV4cCI6MjA3MzczNzYzOX0.re0nwcRGwcvwl8F3Eu1C1g-P3QEwOtNFpK6MGrlL7ek'
-        }
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to get promotions');
-      }
-
-      return response.json();
-    },
-
-    // 5) GET /api/loyalty/available-rewards?accountId=... (using Supabase edge function)
-    async getAvailableRewards(accountId) {
-      const response = await fetch('https://oxsxkwrsbpcmwghfmooz.supabase.co/functions/v1/loyalty-lookup', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3hrd3JzYnBjbXdnaGZtb296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNjE2MzksImV4cCI6MjA3MzczNzYzOX0.re0nwcRGwcvwl8F3Eu1C1g-P3QEwOtNFpK6MGrlL7ek'
-        },
-        body: JSON.stringify({ loyaltyAccountId: accountId })
-      });
-      
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to get available rewards');
-      }
 
       const data = await response.json();
-      return data.available_rewards || [];
-    },
-
-    // 6) POST /api/loyalty/redeem (using existing Supabase edge function)
-    async redeem(loyaltyAccountId, rewardTierId) {
-      const response = await fetch('https://oxsxkwrsbpcmwghfmooz.supabase.co/functions/v1/loyalty-redeem', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3hrd3JzYnBjbXdnaGZtb296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNjE2MzksImV4cCI6MjA3MzczNzYzOX0.re0nwcRGwcvwl8F3Eu1C1g-P3QEwOtNFpK6MGrlL7ek'
-        },
-        body: JSON.stringify({ loyaltyAccountId, rewardTierId })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to redeem reward');
+      
+      if (data.loyalty_account) {
+        loyaltyData = data;
+        showLoyaltyAccount();
+      } else {
+        showLoyaltyLogin();
       }
-
-      return response.json();
-    },
-
-    // 7) POST /api/loyalty/finalize (using existing Supabase edge function)
-    async finalize(rewardId, success, shopifyOrderId) {
-      const response = await fetch('https://oxsxkwrsbpcmwghfmooz.supabase.co/functions/v1/loyalty-finalize', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3hrd3JzYnBjbXdnaGZtb296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNjE2MzksImV4cCI6MjA3MzczNzYzOX0.re0nwcRGwcvwl8F3Eu1C1g-P3QEwOtNFpK6MGrlL7ek'
-        },
-        body: JSON.stringify({ rewardId, success, shopifyOrderId })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to finalize reward');
-      }
-
-      return response.json();
+    } catch (error) {
+      console.error('Error checking loyalty account:', error);
+      showLoyaltyLogin();
     }
-  };
+  }
 
-  // Main Loyalty Widget Class
-  class SquareLoyaltyWidget {
-    constructor(containerId, options = {}) {
-      this.container = document.getElementById(containerId);
-      this.options = {
-        title: options.title || 'Loyalty Rewards',
-        theme: options.theme || 'light',
-        autoApplyDiscounts: options.autoApplyDiscounts !== false,
-        ...options
+  // Connect loyalty account via phone
+  async function connectLoyalty() {
+    const phoneInput = document.getElementById('loyalty-phone');
+    const errorDiv = document.getElementById('loyalty-error');
+    const connectBtn = document.getElementById('loyalty-connect-btn');
+    
+    if (!phoneInput || !connectBtn) return;
+
+    const phone = phoneInput.value.trim();
+    if (!phone) {
+      showError('Please enter a phone number');
+      return;
+    }
+
+    connectBtn.disabled = true;
+    connectBtn.textContent = 'Searching...';
+    hideError();
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/loyalty-lookup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3hrd3JzYnBjbXdnaGZtb296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNjE2MzksImV4cCI6MjA3MzczNzYzOX0.re0nwcRGwcvwl8F3Eu1C1g-P3QEwOtNFpK6MGrlL7ek'
+        },
+        body: JSON.stringify({
+          phone: phone,
+          customer_id: currentCustomerData?.id?.toString(),
+          email: currentCustomerData?.email
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.loyalty_account) {
+        loyaltyData = data;
+        showLoyaltyAccount();
+      } else if (data.enrollment_available) {
+        // Pre-fill signup form with the phone number
+        const signupPhoneInput = document.getElementById('loyalty-signup-phone');
+        if (signupPhoneInput) {
+          signupPhoneInput.value = phone;
+        }
+        showLoyaltySignup();
+      } else {
+        showError('No loyalty account found for this phone number');
+      }
+    } catch (error) {
+      console.error('Error connecting loyalty account:', error);
+      showError('Failed to connect loyalty account');
+    } finally {
+      connectBtn.disabled = false;
+      connectBtn.textContent = 'Search';
+    }
+  }
+
+  // Create loyalty account
+  async function createLoyaltyAccount() {
+    const emailInput = document.getElementById('loyalty-email');
+    const phoneInput = document.getElementById('loyalty-signup-phone');
+    const signupBtn = document.getElementById('loyalty-signup-btn');
+    
+    if (!emailInput || !phoneInput || !signupBtn) return;
+
+    const email = emailInput.value.trim();
+    const phone = phoneInput.value.trim();
+    
+    if (!email || !phone) {
+      showSignupError('Please enter both email and phone number');
+      return;
+    }
+
+    signupBtn.disabled = true;
+    signupBtn.textContent = 'Creating...';
+    hideSignupError();
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/loyalty-create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3hrd3JzYnBjbXdnaGZtb296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNjE2MzksImV4cCI6MjA3MzczNzYzOX0.re0nwcRGwcvwl8F3Eu1C1g-P3QEwOtNFpK6MGrlL7ek'
+        },
+        body: JSON.stringify({
+          email: email,
+          phone: phone,
+          first_name: currentCustomerData?.first_name,
+          last_name: currentCustomerData?.last_name
+        })
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        loyaltyData = data;
+        showLoyaltyAccount();
+      } else {
+        showSignupError(data.error || 'Failed to create loyalty account');
+      }
+    } catch (error) {
+      console.error('Error creating loyalty account:', error);
+      showSignupError('Failed to create loyalty account');
+    } finally {
+      signupBtn.disabled = false;
+      signupBtn.textContent = 'Create Account';
+    }
+  }
+
+  // Redeem reward
+  async function redeemReward(rewardId, rewardName, isPromotion = false) {
+    if (!loyaltyData?.loyalty_account || isProcessingRedemption) return;
+
+    isProcessingRedemption = true;
+    const button = document.querySelector(`[data-reward-id="${rewardId}"]`);
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Redeeming...';
+    }
+
+    try {
+      const endpoint = isPromotion ? 'loyalty-promotion-redeem' : 'loyalty-redeem';
+      const payload = isPromotion ? {
+        loyaltyAccountId: loyaltyData.loyalty_account.square_loyalty_account_id,
+        promotionId: rewardId,
+        customerId: loyaltyData.square_customer_id
+      } : {
+        loyalty_account_id: loyaltyData.loyalty_account.square_loyalty_account_id,
+        reward_id: rewardId
       };
-      
-      this.customerData = null;
-      this.isLoading = false;
-      
-      this.init();
-    }
 
-    init() {
-      if (!this.container) {
-        console.error('Loyalty widget container not found');
-        return;
-      }
-
-      this.render();
-    }
-
-    async identify(phone, email) {
-      try {
-        this.setLoading(true);
-        this.customerData = await LoyaltyAPI.identify(phone, email);
-        await this.loadCustomerData();
-        this.render();
-      } catch (error) {
-        this.showError(error.message);
-      } finally {
-        this.setLoading(false);
-      }
-    }
-
-    async loadCustomerData() {
-      if (!this.customerData) return;
-
-      try {
-        // Load all customer data in parallel
-        const [rewards, promotions, tiers] = await Promise.all([
-          LoyaltyAPI.getAvailableRewards(this.customerData.loyaltyAccountId),
-          LoyaltyAPI.getPromotions(this.customerData.programId, this.customerData.customerId, this.customerData.loyaltyAccountId),
-          LoyaltyAPI.getTiers(this.customerData.programId)
-        ]);
-
-        this.customerData.availableRewards = rewards;
-        this.customerData.activePromotions = promotions.promotions || promotions;
-        this.customerData.tiers = tiers.rewardTiers || tiers;
-      } catch (error) {
-        console.error('Failed to load customer data:', error);
-      }
-    }
-
-    async redeemReward(rewardTierId) {
-      if (!this.customerData) return;
-
-      try {
-        this.setLoading(true);
-        
-        const result = await LoyaltyAPI.redeem(this.customerData.loyaltyAccountId, rewardTierId);
-        
-        if (result.discountCode && this.options.autoApplyDiscounts) {
-          // Auto-apply discount using Shopify's shareable link
-          window.location.href = `/discount/${encodeURIComponent(result.discountCode)}?return_to=/cart`;
-        } else {
-          this.showSuccess(`Discount code: ${result.discountCode}`);
-        }
-        
-      } catch (error) {
-        this.showError(error.message);
-      } finally {
-        this.setLoading(false);
-      }
-    }
-
-    setLoading(loading) {
-      this.isLoading = loading;
-      this.render();
-    }
-
-    showError(message) {
-      const errorDiv = document.createElement('div');
-      errorDiv.className = 'loyalty-error';
-      errorDiv.style.cssText = `
-        background: #fee;
-        color: #c33;
-        padding: 10px;
-        border-radius: 4px;
-        margin: 10px 0;
-        border: 1px solid #fcc;
-      `;
-      errorDiv.textContent = message;
-      
-      this.container.prepend(errorDiv);
-      
-      setTimeout(() => {
-        if (errorDiv.parentNode) {
-          errorDiv.parentNode.removeChild(errorDiv);
-        }
-      }, 5000);
-    }
-
-    showSuccess(message) {
-      const successDiv = document.createElement('div');
-      successDiv.className = 'loyalty-success';
-      successDiv.style.cssText = `
-        background: #efe;
-        color: #3c3;
-        padding: 10px;
-        border-radius: 4px;
-        margin: 10px 0;
-        border: 1px solid #cfc;
-      `;
-      successDiv.textContent = message;
-      
-      this.container.prepend(successDiv);
-      
-      setTimeout(() => {
-        if (successDiv.parentNode) {
-          successDiv.parentNode.removeChild(successDiv);
-        }
-      }, 5000);
-    }
-
-    render() {
-      if (!this.container) return;
-
-      const theme = this.options.theme === 'dark' ? 'loyalty-dark' : 'loyalty-light';
-      
-      this.container.innerHTML = `
-        <div class="square-loyalty-widget ${theme}">
-          <style>
-            .square-loyalty-widget {
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-              max-width: 400px;
-              border: 1px solid #ddd;
-              border-radius: 8px;
-              padding: 20px;
-              background: #fff;
-            }
-            .square-loyalty-widget.loyalty-dark {
-              background: #1a1a1a;
-              color: #fff;
-              border-color: #333;
-            }
-            .loyalty-header {
-              text-align: center;
-              margin-bottom: 20px;
-            }
-            .loyalty-title {
-              font-size: 24px;
-              font-weight: bold;
-              margin: 0 0 10px 0;
-            }
-            .loyalty-form {
-              margin-bottom: 20px;
-            }
-            .loyalty-input {
-              width: 100%;
-              padding: 10px;
-              margin: 5px 0;
-              border: 1px solid #ddd;
-              border-radius: 4px;
-              box-sizing: border-box;
-            }
-            .loyalty-button {
-              width: 100%;
-              padding: 12px;
-              background: #007cba;
-              color: white;
-              border: none;
-              border-radius: 4px;
-              cursor: pointer;
-              font-size: 16px;
-              margin: 5px 0;
-            }
-            .loyalty-button:hover {
-              background: #005a8b;
-            }
-            .loyalty-button:disabled {
-              background: #ccc;
-              cursor: not-allowed;
-            }
-            .loyalty-section {
-              margin: 15px 0;
-              padding: 15px;
-              border: 1px solid #eee;
-              border-radius: 4px;
-            }
-            .loyalty-dark .loyalty-section {
-              border-color: #444;
-            }
-            .loyalty-section h3 {
-              margin: 0 0 10px 0;
-              font-size: 18px;
-            }
-            .loyalty-balance {
-              text-align: center;
-              font-size: 20px;
-              font-weight: bold;
-              color: #007cba;
-            }
-            .loyalty-dark .loyalty-balance {
-              color: #4da6d9;
-            }
-            .loyalty-reward {
-              padding: 10px;
-              margin: 5px 0;
-              border: 1px solid #ddd;
-              border-radius: 4px;
-              cursor: pointer;
-            }
-            .loyalty-dark .loyalty-reward {
-              border-color: #555;
-              background: #2a2a2a;
-            }
-            .loyalty-reward:hover {
-              background: #f5f5f5;
-            }
-            .loyalty-dark .loyalty-reward:hover {
-              background: #3a3a3a;
-            }
-            .loyalty-loading {
-              text-align: center;
-              padding: 20px;
-              color: #666;
-            }
-          </style>
-          
-          <div class="loyalty-header">
-            <h2 class="loyalty-title">${this.options.title}</h2>
-          </div>
-
-          ${this.renderContent()}
-        </div>
-      `;
-
-      this.attachEventListeners();
-    }
-
-    renderContent() {
-      if (this.isLoading) {
-        return '<div class="loyalty-loading">Loading...</div>';
-      }
-
-      if (!this.customerData) {
-        return this.renderIdentifyForm();
-      }
-
-      return this.renderCustomerDashboard();
-    }
-
-    renderIdentifyForm() {
-      return `
-        <div class="loyalty-form">
-          <input type="tel" id="loyalty-phone" class="loyalty-input" placeholder="Phone number (e.g., +1234567890)" />
-          <input type="email" id="loyalty-email" class="loyalty-input" placeholder="Email address" />
-          <button id="loyalty-identify" class="loyalty-button">Find My Account</button>
-        </div>
-        <p style="font-size: 12px; color: #666; text-align: center;">
-          Enter your phone number or email to find your loyalty account or create a new one.
-        </p>
-      `;
-    }
-
-    renderCustomerDashboard() {
-      const { pointsBalance, lifetimePoints, availableRewards = [], activePromotions = [], tiers = [] } = this.customerData;
-
-      return `
-        <div class="loyalty-section">
-          <h3>Your Balance</h3>
-          <div class="loyalty-balance">${pointsBalance || 0} points</div>
-          <div style="text-align: center; font-size: 14px; color: #666;">
-            Lifetime: ${lifetimePoints || 0} points
-          </div>
-        </div>
-
-        ${availableRewards.length > 0 ? `
-          <div class="loyalty-section">
-            <h3>Available Rewards</h3>
-            ${availableRewards.map(reward => `
-              <div class="loyalty-reward" data-reward-id="${reward.id}">
-                <strong>${reward.name || 'Reward'}</strong>
-                <div style="font-size: 14px; color: #666;">${reward.description || 'Click to redeem'}</div>
-              </div>
-            `).join('')}
-          </div>
-        ` : ''}
-
-        ${activePromotions.length > 0 ? `
-          <div class="loyalty-section">
-            <h3>Active Promotions</h3>
-            ${activePromotions.map(promo => `
-              <div class="loyalty-reward">
-                <strong>${promo.name}</strong>
-                <div style="font-size: 14px; color: #666;">${promo.summary || ''}</div>
-              </div>
-            `).join('')}
-          </div>
-        ` : ''}
-
-        ${tiers.length > 0 ? `
-          <div class="loyalty-section">
-            <h3>Redeem Points</h3>
-            ${tiers.map(tier => {
-              const canRedeem = pointsBalance >= (tier.points || 0);
-              return `
-                <div class="loyalty-reward ${canRedeem ? 'can-redeem' : 'cannot-redeem'}" 
-                     data-tier-id="${tier.id}" 
-                     style="${canRedeem ? '' : 'opacity: 0.5; cursor: not-allowed;'}">
-                  <strong>${tier.name}</strong>
-                  <div style="font-size: 14px; color: #666;">
-                    ${tier.points} points - ${tier.definition?.discount_type === 'FIXED_AMOUNT' ? 
-                      `$${(tier.definition.amount / 100).toFixed(2)} off` : 
-                      `${tier.definition?.percentage || 0}% off`}
-                  </div>
-                </div>
-              `;
-            }).join('')}
-          </div>
-        ` : ''}
-
-        <button id="loyalty-refresh" class="loyalty-button" style="background: #666;">
-          Refresh Account
-        </button>
-      `;
-    }
-
-    attachEventListeners() {
-      // Identify form
-      const identifyBtn = document.getElementById('loyalty-identify');
-      if (identifyBtn) {
-        identifyBtn.addEventListener('click', () => {
-          const phone = document.getElementById('loyalty-phone').value.trim();
-          const email = document.getElementById('loyalty-email').value.trim();
-          
-          if (!phone && !email) {
-            this.showError('Please enter your phone number or email address');
-            return;
-          }
-          
-          this.identify(phone, email);
-        });
-      }
-
-      // Tier redemption
-      const tierElements = document.querySelectorAll('[data-tier-id]');
-      tierElements.forEach(element => {
-        if (!element.classList.contains('cannot-redeem')) {
-          element.addEventListener('click', () => {
-            const tierId = element.dataset.tierId;
-            this.redeemReward(tierId);
-          });
-        }
+      const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im94c3hrd3JzYnBjbXdnaGZtb296Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgxNjE2MzksImV4cCI6MjA3MzczNzYzOX0.re0nwcRGwcvwl8F3Eu1C1g-P3QEwOtNFpK6MGrlL7ek'
+        },
+        body: JSON.stringify(payload)
       });
 
-      // Refresh button
-      const refreshBtn = document.getElementById('loyalty-refresh');
-      if (refreshBtn) {
-        refreshBtn.addEventListener('click', () => {
-          this.loadCustomerData().then(() => this.render());
-        });
+      const data = await response.json();
+      
+      if (response.ok && data.discount_code) {
+        // Apply discount code to cart
+        await applyDiscountCode(data.discount_code);
+        
+        // Show success message
+        alert(`${rewardName} redeemed! Discount code ${data.discount_code} has been applied to your cart.`);
+        
+        // Refresh the widget to show updated balance
+        setTimeout(() => {
+          loadCustomerData();
+        }, 1000);
+      } else {
+        throw new Error(data.error || 'Failed to redeem reward');
+      }
+    } catch (error) {
+      console.error('Error redeeming reward:', error);
+      alert(`Failed to redeem ${rewardName}. Please try again.`);
+    } finally {
+      isProcessingRedemption = false;
+      if (button) {
+        button.disabled = false;
+        button.textContent = 'Redeem';
       }
     }
   }
 
-  // Make widget available globally
-  window.SquareLoyaltyWidget = SquareLoyaltyWidget;
-  window.LoyaltyAPI = LoyaltyAPI;
-
-  // Auto-initialize if container exists
-  document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('square-loyalty-widget')) {
-      new SquareLoyaltyWidget('square-loyalty-widget');
+  // Apply discount code to Shopify cart
+  async function applyDiscountCode(code) {
+    try {
+      // Method 1: Try Shopify's discount URL (works on all plans)
+      const discountUrl = `/discount/${encodeURIComponent(code)}?return_to=${encodeURIComponent(window.location.pathname)}`;
+      window.location.href = discountUrl;
+    } catch (error) {
+      console.error('Error applying discount code:', error);
+      // Fallback: show the code to the user
+      prompt('Use this discount code at checkout:', code);
     }
+  }
+
+  // UI helper functions
+  function showLoyaltyLogin() {
+    hideAll();
+    const loginDiv = document.getElementById('loyalty-login');
+    if (loginDiv) loginDiv.style.display = 'block';
+  }
+
+  function showLoyaltySignup() {
+    hideAll();
+    const signupDiv = document.getElementById('loyalty-signup');
+    if (signupDiv) signupDiv.style.display = 'block';
+  }
+
+  function showLoyaltyAccount() {
+    hideAll();
+    const accountDiv = document.getElementById('loyalty-account');
+    const balanceSpan = document.getElementById('loyalty-balance');
+    const lifetimeSpan = document.getElementById('loyalty-lifetime');
+    
+    if (accountDiv && loyaltyData?.loyalty_account) {
+      accountDiv.style.display = 'block';
+      
+      if (balanceSpan) {
+        balanceSpan.textContent = loyaltyData.loyalty_account.balance || 0;
+      }
+      
+      if (lifetimeSpan) {
+        lifetimeSpan.textContent = loyaltyData.loyalty_account.points_earned_lifetime || 0;
+      }
+      
+      refreshRewardsList();
+      refreshPromotionsList();
+    }
+  }
+
+  function showLoading() {
+    hideAll();
+    const loadingDiv = document.getElementById('loyalty-loading');
+    if (loadingDiv) loadingDiv.style.display = 'block';
+  }
+
+  function hideAll() {
+    const sections = ['loyalty-loading', 'loyalty-login', 'loyalty-signup', 'loyalty-account'];
+    sections.forEach(id => {
+      const element = document.getElementById(id);
+      if (element) element.style.display = 'none';
+    });
+  }
+
+  function refreshRewardsList() {
+    const rewardsList = document.getElementById('loyalty-rewards-list');
+    if (!rewardsList || !loyaltyData?.available_rewards) return;
+
+    if (loyaltyData.available_rewards.length === 0) {
+      rewardsList.innerHTML = '<div class="loyalty-no-items">No rewards available at your current points level</div>';
+      return;
+    }
+
+    rewardsList.innerHTML = loyaltyData.available_rewards.map(reward => `
+      <div class="loyalty-item">
+        <div class="loyalty-item-info">
+          <div class="loyalty-item-name">${reward.name}</div>
+          <div class="loyalty-item-points">${reward.points_required} points</div>
+        </div>
+        <button 
+          class="loyalty-item-button" 
+          data-reward-id="${reward.id}" 
+          onclick="window.redeemLoyaltyReward('${reward.id}', '${reward.name}', false)"
+        >
+          Redeem
+        </button>
+      </div>
+    `).join('');
+  }
+
+  function refreshPromotionsList() {
+    const promotionsSection = document.getElementById('promotions-section');
+    const promotionsList = document.getElementById('loyalty-promotions-list');
+    
+    if (!promotionsSection || !promotionsList) return;
+
+    const eligiblePromotions = loyaltyData?.available_promotions || [];
+    
+    if (eligiblePromotions.length === 0) {
+      promotionsSection.style.display = 'none';
+      return;
+    }
+
+    promotionsSection.style.display = 'block';
+    promotionsList.innerHTML = eligiblePromotions.map(promo => {
+      const buttonClass = promo.eligibility_reason === 'birthday_month' ? 'birthday' : 'promotion';
+      const value = formatPromotionValue(promo);
+      
+      return `
+        <div class="loyalty-item">
+          <div class="loyalty-item-info">
+            <div class="loyalty-item-name">${promo.name}</div>
+            <div class="loyalty-item-points">${value}</div>
+          </div>
+          <button 
+            class="loyalty-item-button ${buttonClass}" 
+            data-reward-id="${promo.id}" 
+            onclick="window.redeemLoyaltyReward('${promo.id}', '${promo.name}', true)"
+          >
+            Redeem
+          </button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function formatPromotionValue(promo) {
+    if (promo.incentive_type === 'PERCENTAGE_DISCOUNT') {
+      return `${promo.incentive_value}% OFF`;
+    } else if (promo.incentive_type === 'FIXED_DISCOUNT') {
+      const amount = promo.incentive_value?.amount || promo.incentive_value;
+      return `$${(amount/100).toFixed(0)} OFF`;
+    }
+    return 'SPECIAL';
+  }
+
+  function showError(message) {
+    const errorDiv = document.getElementById('loyalty-error');
+    if (errorDiv) {
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+    }
+  }
+
+  function hideError() {
+    const errorDiv = document.getElementById('loyalty-error');
+    if (errorDiv) {
+      errorDiv.style.display = 'none';
+    }
+  }
+
+  function showSignupError(message) {
+    const errorDiv = document.getElementById('loyalty-signup-error');
+    if (errorDiv) {
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+    }
+  }
+
+  function hideSignupError() {
+    const errorDiv = document.getElementById('loyalty-signup-error');
+    if (errorDiv) {
+      errorDiv.style.display = 'none';
+    }
+  }
+
+  // Expose redeem function globally
+  window.redeemLoyaltyReward = redeemReward;
+
+  // Initialize when DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLoyaltyWidget);
+  } else {
+    initLoyaltyWidget();
+  }
+
+  // Re-inject on cart updates
+  const observer = new MutationObserver(() => {
+    if (!document.getElementById(WIDGET_ID)) {
+      setTimeout(insertWidget, 100);
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+
+  // Listen for cart events
+  ['cart:updated', 'cart:refresh', 'cart:open', 'cart-drawer:open'].forEach(event => {
+    document.addEventListener(event, () => {
+      setTimeout(insertWidget, 100);
+    });
   });
 
 })();

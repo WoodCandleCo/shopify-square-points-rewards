@@ -1,6 +1,5 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,181 +7,161 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-    );
+    const { 
+      reward_id, 
+      reward_name, 
+      discount_amount, 
+      discount_type, 
+      max_discount_amount,
+      shopify_product_id,
+      shopify_product_handle,
+      shopify_sku,
+      applicable_product_names,
+      square_reward_id
+    } = await req.json();
 
-    const { reward_id, customer_email, discount_amount, discount_type, max_discount_amount, square_reward_data, code } = await req.json();
-
-    console.log('Creating Shopify discount for reward:', reward_id);
-    console.log('Square reward data:', JSON.stringify(square_reward_data, null, 2));
+    console.log('Creating Shopify discount for reward:', reward_name);
 
     // Get Shopify credentials
-    const shopifyStoreUrl = Deno.env.get('SHOPIFY_STORE_URL');
+    let shopifyStoreUrl = Deno.env.get('SHOPIFY_STORE_URL');
     const shopifyAccessToken = Deno.env.get('SHOPIFY_ACCESS_TOKEN');
 
     if (!shopifyStoreUrl || !shopifyAccessToken) {
       throw new Error('Missing Shopify credentials');
     }
 
-    const discountCode = (code && typeof code === 'string' && code.length <= 64)
-      ? code
+    // Clean up store URL
+    shopifyStoreUrl = shopifyStoreUrl.replace(/^https?:\/\//, '');
+    shopifyStoreUrl = shopifyStoreUrl.replace(/\/$/, '');
+
+    // Generate unique discount code
+    const discountCode = square_reward_id 
+      ? `SQ-${square_reward_id.slice(-8)}` 
       : `LOYALTY${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    
-    // Parse Square reward definition to understand the discount scope
-    const definition = square_reward_data?.definition || {};
-    const scope = definition.scope; // ORDER, CATEGORY, ITEM_VARIATION
-    const catalogObjectIds = definition.catalog_object_ids || [];
-    
-    console.log('Discount scope:', scope, 'Catalog objects:', catalogObjectIds);
 
-    // Get product mappings for catalog objects
-    let productMapping = null;
-    if (catalogObjectIds.length > 0) {
-      const { data: mappings } = await supabaseClient
-        .from('product_mappings')
-        .select('*')
-        .in('square_catalog_object_id', catalogObjectIds)
-        .eq('is_active', true)
-        .limit(1);
+    // Determine discount configuration
+    let valueType: string;
+    let value: string;
+    let allocationLimit: string | null = null;
+
+    if (discount_type === 'PERCENTAGE') {
+      valueType = 'percentage';
+      value = `-${discount_amount}`;
       
-      productMapping = mappings?.[0];
-      console.log('Found product mapping:', productMapping);
-    }
-
-    let discountPayload: any;
-
-    // Handle different discount types based on Square's scope
-    if (scope === 'ITEM_VARIATION' || scope === 'CATEGORY') {
-      // For specific items or categories, we need to be more careful
-      // Since we can't directly map Square catalog IDs to Shopify products,
-      // we'll create a restricted discount with specific requirements
-      
-      let title = `Loyalty Reward - ${discountCode}`;
-      let prerequisiteToEntitlementQuantityRatio = null;
-      
-      if (scope === 'ITEM_VARIATION') {
-        // For free specific items, create a more targeted discount
-        title += ` (Free ${productMapping?.product_name || 'Item'})`;
-        
-        // Create a discount that's more specific to the product type
-        discountPayload = {
-          price_rule: {
-            title: title,
-            value_type: 'percentage',
-            value: '-100.0', // 100% off
-            customer_selection: 'all',
-            target_type: 'line_item',
-            target_selection: 'all',
-            allocation_method: 'each',
-            usage_limit: 1,
-            once_per_customer: true,
-            starts_at: new Date().toISOString(),
-            ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            prerequisite_subtotal_range: {
-              greater_than_or_equal_to: '0.01'
-            },
-            // Limit discount amount to prevent abuse
-            allocation_limit: '25.00'
-          }
-        };
-
-        // Add notes about which products this applies to
-        if (productMapping?.shopify_tag) {
-          discountPayload.price_rule.title += ` - Tag products with: ${productMapping.shopify_tag}`;
-        }
-      } else if (scope === 'CATEGORY') {
-        title += ` (Category Discount - Apply to specific category)`;
-        
-        discountPayload = {
-          price_rule: {
-            title: title,
-            value_type: 'percentage',
-            value: '-100.0', // 100% off for category items
-            customer_selection: 'all',
-            target_type: 'line_item',
-            target_selection: 'all',
-            allocation_method: 'across',
-            usage_limit: 1,
-            once_per_customer: true,
-            starts_at: new Date().toISOString(),
-            ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-            prerequisite_subtotal_range: {
-              greater_than_or_equal_to: '0.01'
-            },
-            // Limit the maximum discount to prevent abuse
-            allocation_limit: '50.00' // Max $50 discount for category items
-          }
-        };
+      // Set allocation limit for percentage discounts to prevent abuse
+      if (max_discount_amount) {
+        allocationLimit = (max_discount_amount / 100).toString();
+      } else if (discount_amount === 100) {
+        // For 100% off (free items), limit to reasonable amount
+        allocationLimit = '25.00';
       }
     } else {
-      // ORDER scope - apply to entire order
-      let valueType: string;
-      let value: string;
-      
-      if (discount_type === 'PERCENTAGE') {
-        valueType = 'percentage';
-        value = `-${discount_amount}.0`; // Shopify expects negative percentages
-      } else {
-        valueType = 'fixed_amount';
-        value = (discount_amount / 100).toString(); // Convert cents to dollars
-      }
+      valueType = 'fixed_amount';
+      value = `-${(discount_amount / 100).toFixed(2)}`;
+    }
 
-      discountPayload = {
-        price_rule: {
-          title: `Loyalty Reward - ${discountCode}`,
-          value_type: valueType,
-          value: value,
-          customer_selection: 'all',
-          target_type: 'line_item',
-          target_selection: 'all',
-          allocation_method: 'across',
-          usage_limit: 1,
-          once_per_customer: true,
-          starts_at: new Date().toISOString(),
-          ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          prerequisite_subtotal_range: {
-            greater_than_or_equal_to: '0.01'
+    // Create price rule payload
+    const priceRulePayload: any = {
+      price_rule: {
+        title: `${reward_name} - ${discountCode}`,
+        value_type: valueType,
+        value: value,
+        customer_selection: 'all',
+        target_type: 'line_item',
+        target_selection: 'all',
+        allocation_method: discount_amount === 100 ? 'each' : 'across',
+        usage_limit: 1,
+        once_per_customer: true,
+        starts_at: new Date().toISOString(),
+        ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
+        prerequisite_subtotal_range: {
+          greater_than_or_equal_to: '0.01'
+        }
+      }
+    };
+
+    // Add allocation limit if specified
+    if (allocationLimit) {
+      priceRulePayload.price_rule.allocation_limit = allocationLimit;
+    }
+
+    // For free items (100% off), add product restrictions if available
+    if (discount_amount === 100 && applicable_product_names && applicable_product_names.length > 0) {
+      // Try to find Shopify products that match the applicable product names
+      try {
+        const productsResponse = await fetch(
+          `https://${shopifyStoreUrl}/admin/api/2024-10/products.json?limit=250&fields=id,title,handle,variants`,
+          {
+            headers: {
+              'X-Shopify-Access-Token': shopifyAccessToken,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (productsResponse.ok) {
+          const productsData = await productsResponse.json();
+          const allProducts = productsData.products || [];
+          
+          // Find products that match the applicable product names
+          const matchingProducts = allProducts.filter((product: any) => 
+            applicable_product_names.some((applicableProduct: any) => {
+              const productTitle = typeof applicableProduct === 'string' 
+                ? applicableProduct 
+                : applicableProduct.title;
+              return product.title.toLowerCase().includes(productTitle.toLowerCase()) ||
+                     productTitle.toLowerCase().includes(product.title.toLowerCase());
+            })
+          );
+
+          if (matchingProducts.length > 0) {
+            // Get all variant IDs for the matching products
+            const variantIds = matchingProducts.flatMap((product: any) => 
+              product.variants?.map((variant: any) => variant.id) || []
+            );
+
+            if (variantIds.length > 0) {
+              priceRulePayload.price_rule.entitled_product_ids = matchingProducts.map((p: any) => p.id);
+              priceRulePayload.price_rule.entitled_variant_ids = variantIds;
+              priceRulePayload.price_rule.target_selection = 'entitled';
+              
+              console.log(`Restricting discount to ${matchingProducts.length} matching products`);
+            }
           }
         }
-      };
-
-      // Add maximum discount amount for percentage discounts
-      if (discount_type === 'PERCENTAGE' && max_discount_amount) {
-        discountPayload.price_rule.value_type = 'percentage';
-        discountPayload.price_rule.value = `-${discount_amount}.0`;
-        discountPayload.price_rule.allocation_limit = (max_discount_amount / 100).toString();
+      } catch (productError) {
+        console.warn('Could not fetch products for restriction:', productError);
+        // Continue without product restrictions
       }
     }
 
-    console.log('Creating price rule with payload:', JSON.stringify(discountPayload, null, 2));
+    console.log('Creating price rule:', JSON.stringify(priceRulePayload, null, 2));
 
+    // Create price rule
     const priceRuleResponse = await fetch(`https://${shopifyStoreUrl}/admin/api/2024-10/price_rules.json`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
         'X-Shopify-Access-Token': shopifyAccessToken,
+        'Content-Type': 'application/json'
       },
-      body: JSON.stringify(discountPayload),
+      body: JSON.stringify(priceRulePayload)
     });
 
     if (!priceRuleResponse.ok) {
       const errorText = await priceRuleResponse.text();
-      console.error('Failed to create price rule:', errorText);
+      console.error('Price rule creation failed:', errorText);
       throw new Error(`Failed to create price rule: ${errorText}`);
     }
 
     const priceRuleData = await priceRuleResponse.json();
     const priceRuleId = priceRuleData.price_rule.id;
 
-    console.log('Created price rule with ID:', priceRuleId);
+    console.log('Created price rule:', priceRuleId);
 
     // Create discount code
     const discountCodePayload = {
@@ -197,16 +176,16 @@ serve(async (req) => {
       {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'X-Shopify-Access-Token': shopifyAccessToken,
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(discountCodePayload),
+        body: JSON.stringify(discountCodePayload)
       }
     );
 
     if (!discountCodeResponse.ok) {
       const errorText = await discountCodeResponse.text();
-      console.error('Failed to create discount code:', errorText);
+      console.error('Discount code creation failed:', errorText);
       throw new Error(`Failed to create discount code: ${errorText}`);
     }
 
@@ -220,7 +199,10 @@ serve(async (req) => {
         discount_code: discountCode,
         price_rule_id: priceRuleId,
         discount_id: discountCodeData.discount_code.id,
-        expires_at: discountPayload.price_rule.ends_at
+        expires_at: priceRulePayload.price_rule.ends_at,
+        value_type: valueType,
+        value: value,
+        allocation_limit: allocationLimit
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

@@ -7,7 +7,6 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -21,17 +20,18 @@ serve(async (req) => {
 
   try {
     const SQUARE_ACCESS_TOKEN = Deno.env.get('SQUARE_ACCESS_TOKEN')
-    if (!SQUARE_ACCESS_TOKEN) {
-      throw new Error('Square access token not configured')
+    const SQUARE_LOYALTY_PROGRAM_ID = Deno.env.get('SQUARE_LOYALTY_PROGRAM_ID')
+    
+    if (!SQUARE_ACCESS_TOKEN || !SQUARE_LOYALTY_PROGRAM_ID) {
+      throw new Error('Square configuration not complete')
     }
 
-    // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    const { email, phone } = await req.json()
+    const { email, phone, first_name, last_name } = await req.json()
 
     if (!email || !phone) {
       return new Response(
@@ -42,24 +42,27 @@ serve(async (req) => {
 
     // Normalize phone to E.164 format
     const rawDigits = String(phone).replace(/\D/g, '')
-    let e164 = String(phone).trim()
-    if (!String(phone).startsWith('+')) {
-      if (rawDigits.length === 10) e164 = `+1${rawDigits}`
-      else if (rawDigits.length === 11 && rawDigits.startsWith('1')) e164 = `+${rawDigits}`
-      else e164 = `+${rawDigits}`
+    let e164Phone = String(phone).trim()
+    if (!phone.startsWith('+')) {
+      if (rawDigits.length === 10) {
+        e164Phone = `+1${rawDigits}`
+      } else if (rawDigits.length === 11 && rawDigits.startsWith('1')) {
+        e164Phone = `+${rawDigits}`
+      } else {
+        e164Phone = `+${rawDigits}`
+      }
     }
 
-    console.log(`Creating loyalty account for email: ${email}, phone: ${e164}`)
+    console.log(`Creating loyalty account for email: ${email}, phone: ${e164Phone}`)
 
-    // Get the environment setting from the database
+    // Get environment setting
     const { data: settingData } = await supabase
       .from('app_settings')
       .select('value')
       .eq('key', 'square_environment')
       .single()
 
-    // Normalize environment value
-    let environment: string = 'sandbox'
+    let environment = 'sandbox'
     const raw = (settingData as any)?.value
     if (typeof raw === 'string') {
       try { environment = JSON.parse(raw) } catch { environment = raw }
@@ -68,14 +71,21 @@ serve(async (req) => {
     }
     environment = environment === 'production' ? 'production' : 'sandbox'
     
-    // Use appropriate Square API URL based on environment
     const baseUrl = environment === 'production' 
       ? 'https://connect.squareup.com'
       : 'https://connect.squareupsandbox.com'
 
-    console.log(`Using Square ${environment} environment: ${baseUrl}`)
+    console.log(`Using Square ${environment} environment`)
 
-    // First, create customer in Square
+    // Step 1: Create customer in Square
+    const customerPayload: any = {
+      email_address: email,
+      phone_number: e164Phone
+    }
+
+    if (first_name) customerPayload.given_name = first_name
+    if (last_name) customerPayload.family_name = last_name
+
     const customerResponse = await fetch(`${baseUrl}/v2/customers`, {
       method: 'POST',
       headers: {
@@ -83,15 +93,21 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'Square-Version': '2024-10-17'
       },
-      body: JSON.stringify({
-        email_address: email,
-        phone_number: e164
-      })
+      body: JSON.stringify(customerPayload)
     })
 
     if (!customerResponse.ok) {
       const errorText = await customerResponse.text()
       console.error(`Square customer creation error: ${customerResponse.status} - ${errorText}`)
+      
+      // Check if customer already exists
+      if (errorText.includes('EMAIL_ADDRESS_INVALID') || errorText.includes('PHONE_NUMBER_INVALID')) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid email or phone number format' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+      
       return new Response(
         JSON.stringify({ error: 'Failed to create customer account' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -99,9 +115,20 @@ serve(async (req) => {
     }
 
     const customerData = await customerResponse.json()
-    console.log(`Created Square customer:`, JSON.stringify(customerData, null, 2))
+    const squareCustomerId = customerData.customer.id
+    console.log(`Created Square customer: ${squareCustomerId}`)
 
-    // Then create loyalty account
+    // Step 2: Create loyalty account
+    const loyaltyPayload = {
+      loyalty_account: {
+        program_id: SQUARE_LOYALTY_PROGRAM_ID,
+        mapping: {
+          phone_number: e164Phone
+        }
+      },
+      idempotency_key: `loyalty-${squareCustomerId}-${Date.now()}`
+    }
+
     const loyaltyResponse = await fetch(`${baseUrl}/v2/loyalty/accounts`, {
       method: 'POST',
       headers: {
@@ -109,12 +136,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'Square-Version': '2024-10-17'
       },
-      body: JSON.stringify({
-        program_id: 'main', // You might need to get this from your loyalty program
-        mapping: {
-          phone_number: e164
-        }
-      })
+      body: JSON.stringify(loyaltyPayload)
     })
 
     if (!loyaltyResponse.ok) {
@@ -127,35 +149,69 @@ serve(async (req) => {
     }
 
     const loyaltyData = await loyaltyResponse.json()
-    console.log(`Created Square loyalty account:`, JSON.stringify(loyaltyData, null, 2))
+    const loyaltyAccount = loyaltyData.loyalty_account
+    console.log(`Created Square loyalty account: ${loyaltyAccount.id}`)
 
-    // Create the loyalty account data for response
-    const loyaltyAccountData = {
-      id: loyaltyData.loyalty_account.id,
-      program_id: loyaltyData.loyalty_account.program_id,
-      square_loyalty_account_id: loyaltyData.loyalty_account.id,
-      balance: loyaltyData.loyalty_account.balance || 0,
-      points_earned_lifetime: loyaltyData.loyalty_account.lifetime_points || 0,
-      user_id: null
+    // Step 3: Create profile in Supabase
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        email: email,
+        phone: e164Phone,
+        first_name: first_name,
+        last_name: last_name,
+        square_customer_id: squareCustomerId
+      })
+      .select()
+      .single()
+
+    if (profileError) {
+      console.error('Profile creation error:', profileError)
+      // Continue even if profile creation fails
     }
 
-    // Get available rewards based on points balance
+    // Step 4: Create loyalty account record in Supabase
+    let dbLoyaltyAccount = null
+    if (profile) {
+      const { data: loyaltyAccountData, error: loyaltyAccountError } = await supabase
+        .from('loyalty_accounts')
+        .insert({
+          user_id: profile.id,
+          program_id: loyaltyAccount.program_id,
+          square_loyalty_account_id: loyaltyAccount.id,
+          balance: loyaltyAccount.balance || 0,
+          points_earned_lifetime: loyaltyAccount.lifetime_points || 0
+        })
+        .select()
+        .single()
+
+      if (!loyaltyAccountError) {
+        dbLoyaltyAccount = loyaltyAccountData
+      }
+    }
+
+    // Get available rewards
     const { data: rewards } = await supabase
       .from('loyalty_rewards')
       .select('*')
       .eq('is_active', true)
-      .lte('points_required', loyaltyAccountData.balance)
+      .lte('points_required', loyaltyAccount.balance || 0)
       .order('points_required', { ascending: true })
-
-    console.log(`Found ${rewards?.length || 0} available rewards`)
 
     return new Response(
       JSON.stringify({
         success: true,
-        loyalty_account: loyaltyAccountData,
+        loyalty_account: {
+          id: dbLoyaltyAccount?.id || loyaltyAccount.id,
+          square_loyalty_account_id: loyaltyAccount.id,
+          program_id: loyaltyAccount.program_id,
+          balance: loyaltyAccount.balance || 0,
+          points_earned_lifetime: loyaltyAccount.lifetime_points || 0,
+          customer_id: squareCustomerId
+        },
         available_rewards: rewards || [],
-        square_customer_id: customerData.customer.id,
-        phone_number: e164,
+        square_customer_id: squareCustomerId,
+        phone_number: e164Phone,
         email: email
       }),
       {

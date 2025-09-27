@@ -18,93 +18,78 @@ serve(async (req) => {
   try {
     const orderData = await req.json()
     
-    console.log('Received Shopify order webhook:', orderData.id)
+    console.log('Processing Shopify order webhook:', orderData.id)
+    console.log('Order total:', orderData.total_price)
+    console.log('Customer:', orderData.customer?.id)
 
-    // Check if the order used any discount codes
-    const discountCodes = orderData.discount_codes || []
-    const discountApplications = orderData.discount_applications || []
-    
-    // Look for discount codes that start with "SQ-" (our Square reward codes)
-    const squareDiscountCodes = discountCodes.filter((code: any) => 
-      code.code && code.code.startsWith('SQ-')
-    )
-
-    const squareDiscountApps = discountApplications.filter((app: any) => 
-      app.code && app.code.startsWith('SQ-')
-    )
-
-    if (squareDiscountCodes.length === 0 && squareDiscountApps.length === 0) {
-      console.log('No Square discount codes found in order')
-      return new Response(
-        JSON.stringify({ message: 'No Square discount codes to process' }),
-        {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 200,
-        }
-      )
-    }
-
-    // Initialize Supabase client
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Process each Square discount code
-    for (const discountCode of [...squareDiscountCodes, ...squareDiscountApps]) {
+    // Process discount codes (finalize rewards)
+    const discountCodes = orderData.discount_codes || []
+    const discountApplications = orderData.discount_applications || []
+    
+    const squareDiscountCodes = [
+      ...discountCodes.filter((code: any) => code.code && code.code.startsWith('SQ-')),
+      ...discountApplications.filter((app: any) => app.code && app.code.startsWith('SQ-'))
+    ]
+
+    for (const discountCode of squareDiscountCodes) {
       const code = discountCode.code
-      
-      // Extract reward ID from discount code (format: SQ-{rewardId})
       const rewardIdMatch = code.match(/^SQ-(.+)$/)
-      if (!rewardIdMatch) {
-        console.log(`Invalid Square discount code format: ${code}`)
-        continue
-      }
       
-      const rewardId = rewardIdMatch[1]
-      console.log(`Processing Square reward finalization for reward: ${rewardId}`)
+      if (rewardIdMatch) {
+        const rewardId = rewardIdMatch[1]
+        console.log(`Finalizing Square reward: ${rewardId}`)
 
-      try {
-        // Call the loyalty-finalize function to redeem the reward
-        const finalizeResponse = await supabase.functions.invoke('loyalty-finalize', {
-          body: {
-            rewardId,
-            success: true,
-            shopifyOrderId: orderData.id
-          }
-        })
-
-        if (finalizeResponse.error) {
-          console.error(`Failed to finalize reward ${rewardId}:`, finalizeResponse.error)
-        } else {
-          console.log(`Successfully finalized reward ${rewardId} for order ${orderData.id}`)
+        try {
+          await supabase.functions.invoke('loyalty-finalize', {
+            body: {
+              rewardId,
+              success: true,
+              shopifyOrderId: orderData.id
+            }
+          })
+          console.log(`Successfully finalized reward ${rewardId}`)
+        } catch (error) {
+          console.error(`Failed to finalize reward ${rewardId}:`, error)
         }
-
-      } catch (error) {
-        console.error(`Error finalizing reward ${rewardId}:`, error)
       }
     }
 
-    // Optional: Accumulate points for the purchase
-    // This would require implementing the Square Loyalty Accumulate API
-    // Based on your program's accrual rules (1 point per $1 spent)
-    
+    // Process points accumulation for eligible purchases
     const totalAmount = parseFloat(orderData.total_price || '0')
-    if (totalAmount > 0) {
-      console.log(`Order ${orderData.id} total: $${totalAmount} - could accumulate ${Math.floor(totalAmount)} points`)
+    const customer = orderData.customer
+    
+    if (totalAmount > 0 && customer) {
+      console.log(`Processing points accumulation for customer ${customer.id}, order total: $${totalAmount}`)
       
-      // TODO: Implement points accumulation if desired
-      // This would require:
-      // 1. Finding the customer's loyalty account
-      // 2. Calling Square Loyalty Accumulate API
-      // 3. Recording the transaction in our database
+      try {
+        await supabase.functions.invoke('loyalty-accumulate-points', {
+          body: {
+            customerId: customer.id.toString(),
+            customerEmail: customer.email,
+            customerPhone: customer.phone,
+            orderTotal: totalAmount,
+            orderId: orderData.id,
+            orderNumber: orderData.order_number
+          }
+        })
+        console.log(`Points accumulation processed for order ${orderData.id}`)
+      } catch (accumulateError) {
+        console.error('Points accumulation failed:', accumulateError)
+        // Don't fail the webhook for this
+      }
     }
 
     return new Response(
       JSON.stringify({ 
-        message: 'Webhook processed successfully',
+        message: 'Order webhook processed successfully',
         orderId: orderData.id,
-        processedDiscounts: [...squareDiscountCodes, ...squareDiscountApps].length
+        processedDiscounts: squareDiscountCodes.length,
+        pointsEligible: totalAmount > 0 && customer ? true : false
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
