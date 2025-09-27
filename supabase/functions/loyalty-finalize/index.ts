@@ -27,6 +27,7 @@ serve(async (req) => {
 
     // Get environment variables
     const SQUARE_ACCESS_TOKEN = Deno.env.get('SQUARE_ACCESS_TOKEN')
+    const SQUARE_LOCATION_ID = Deno.env.get('SQUARE_LOCATION_ID')
 
     if (!SQUARE_ACCESS_TOKEN) {
       throw new Error('Square access token not configured')
@@ -70,7 +71,8 @@ serve(async (req) => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          idempotency_key: `redeem-${rewardId}-${Date.now()}`
+          idempotency_key: `redeem-${rewardId}-${Date.now()}`,
+          ...(SQUARE_LOCATION_ID ? { location_id: SQUARE_LOCATION_ID } : {})
         })
       })
 

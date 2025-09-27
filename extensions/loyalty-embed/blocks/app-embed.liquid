@@ -269,19 +269,24 @@
       }
     }
     
-    async function redeemReward(rewardId, discountCode) {
+    async function redeemReward(rewardId, accountId) {
       try {
-        const response = await fetch('\${CONFIG.domain}/api/loyalty/redeem', {
+        const response = await fetch(`${CONFIG.domain}/api/loyalty/redeem`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ rewardId })
+          body: JSON.stringify({ loyalty_account_id: accountId, reward_id: rewardId })
         });
         
         if (response.ok) {
-          await applyDiscountCode(discountCode);
-          loadCustomerLoyalty(); // Refresh the display
+          const data = await response.json();
+          if (data?.discount_code) {
+            await applyDiscountCode(data.discount_code);
+            loadCustomerLoyalty(); // Refresh the display
+          } else {
+            alert('No discount code returned');
+          }
         } else {
-          alert('Failed to redeem reward');
+          alert('Failed to prepare reward');
         }
       } catch (error) {
         console.error('Error redeeming reward:', error);
@@ -333,8 +338,8 @@
           const rewardDiv = document.createElement('div');
           rewardDiv.className = 'loyalty-widget__reward';
           rewardDiv.innerHTML = \`
-            <span class="loyalty-widget__reward-text">\${reward.name} - \${reward.points} pts</span>
-            <button onclick="redeemReward('\${reward.id}', '\${reward.discount_code}')" class="loyalty-widget__redeem-btn">Redeem</button>
+            <span class="loyalty-widget__reward-text">${reward.name} - ${reward.points} pts</span>
+            <button onclick="redeemReward('${reward.id}', '${account.id}')" class="loyalty-widget__redeem-btn">Redeem</button>
           \`;
           rewardsContainer.appendChild(rewardDiv);
         });

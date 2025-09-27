@@ -79,14 +79,43 @@ export const action: ActionFunction = async ({ request }) => {
       squareRewardDefinition = rewardTier;
     }
 
-    // Create Shopify discount code
+    // Step 1: Create a Square reward (ISSUED - lock points, do not redeem yet)
+    const squareResponse = await fetch(`https://connect.squareup.com/v2/loyalty/rewards`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
+        'Content-Type': 'application/json',
+        'Square-Version': '2024-10-17'
+      },
+      body: JSON.stringify({
+        reward: {
+          loyalty_account_id: loyaltyAccount.square_loyalty_account_id,
+          reward_tier_id: reward.square_reward_id
+        }
+      })
+    });
+
+    if (!squareResponse.ok) {
+      const errorData = await squareResponse.json();
+      console.error('Square reward creation error:', errorData);
+      return json({ error: "Failed to create reward" }, { 
+        status: 500,
+        headers: corsHeaders 
+      });
+    }
+
+    const squareData = await squareResponse.json();
+    const squareRewardId = squareData.reward?.id;
+
+    // Step 2: Create a Shopify discount code linked to this Square reward
     const shopifyDiscountResponse = await supabase.functions.invoke('create-shopify-discount', {
       body: {
         reward_id: reward.id,
         discount_amount: reward.discount_amount,
         discount_type: reward.discount_type,
         max_discount_amount: reward.max_discount_amount,
-        square_reward_data: squareRewardDefinition
+        square_reward_data: squareRewardDefinition,
+        code: squareRewardId ? `SQ-${squareRewardId}` : undefined
       }
     });
 
@@ -100,57 +129,13 @@ export const action: ActionFunction = async ({ request }) => {
 
     const discountData = shopifyDiscountResponse.data;
 
-    // Call Square API to redeem reward
-    const squareResponse = await fetch(`https://connect.squareup.com/v2/loyalty/rewards`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
-        'Content-Type': 'application/json',
-        'Square-Version': '2024-10-17'
-      },
-      body: JSON.stringify({
-        reward: {
-          loyalty_account_id: loyaltyAccount.square_loyalty_account_id,
-          reward_tier_id: reward.square_reward_id,
-          order_id: `shopify-${Date.now()}` // Generate unique order ID
-        }
-      })
-    });
+    // Do NOT update local balance or record redemption yet; finalize on order webhook
 
-    if (!squareResponse.ok) {
-      const errorData = await squareResponse.json();
-      console.error('Square redemption error:', errorData);
-      return json({ error: "Failed to redeem reward" }, { 
-        status: 500,
-        headers: corsHeaders 
-      });
-    }
-
-    const squareData = await squareResponse.json();
-
-    // Update loyalty account balance
-    const newBalance = loyaltyAccount.balance - reward.points_required;
-    await supabase
-      .from('loyalty_accounts')
-      .update({ balance: newBalance })
-      .eq('id', loyalty_account_id);
-
-    // Record transaction
-    await supabase
-      .from('loyalty_transactions')
-      .insert({
-        loyalty_account_id: loyalty_account_id,
-        user_id: loyaltyAccount.user_id,
-        transaction_type: 'REDEMPTION',
-        points: -reward.points_required,
-        description: `Redeemed: ${reward.name}`,
-        square_transaction_id: squareData.reward?.id
-      });
 
     return json({
       success: true,
-      new_balance: newBalance,
-      square_reward_id: squareData.reward?.id,
+      status: 'issued',
+      square_reward_id: squareRewardId,
       discount_code: discountData.discount_code,
       discount_expires_at: discountData.expires_at
     }, {

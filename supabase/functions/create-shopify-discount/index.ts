@@ -19,7 +19,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     );
 
-    const { reward_id, customer_email, discount_amount, discount_type, max_discount_amount, square_reward_data } = await req.json();
+    const { reward_id, customer_email, discount_amount, discount_type, max_discount_amount, square_reward_data, code } = await req.json();
 
     console.log('Creating Shopify discount for reward:', reward_id);
     console.log('Square reward data:', JSON.stringify(square_reward_data, null, 2));
@@ -32,8 +32,9 @@ serve(async (req) => {
       throw new Error('Missing Shopify credentials');
     }
 
-    // Generate unique discount code
-    const discountCode = `LOYALTY${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const discountCode = (code && typeof code === 'string' && code.length <= 64)
+      ? code
+      : `LOYALTY${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
     
     // Parse Square reward definition to understand the discount scope
     const definition = square_reward_data?.definition || {};
