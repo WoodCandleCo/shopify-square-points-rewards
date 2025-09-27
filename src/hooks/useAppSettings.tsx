@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-export interface AppSettings {
+interface AppSettings {
   square_environment: 'sandbox' | 'production';
   loyalty_widget_enabled: boolean;
   show_points_balance: boolean;
