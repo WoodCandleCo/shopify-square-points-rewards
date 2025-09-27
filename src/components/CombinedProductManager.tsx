@@ -73,9 +73,19 @@ const CombinedProductManager = () => {
       }
     } catch (error) {
       console.error('Error loading products:', error);
+      
+      let errorMessage = "Could not load products from Shopify.";
+      
+      // Check if it's a Shopify API authentication error
+      if (error.message && error.message.includes('Invalid API key or access token')) {
+        errorMessage = "Shopify API credentials are invalid. Please check your SHOPIFY_ACCESS_TOKEN and SHOPIFY_SHOP_DOMAIN in Supabase secrets.";
+      } else if (error.message && error.message.includes('Shopify credentials not configured')) {
+        errorMessage = "Shopify credentials are not configured. Please set SHOPIFY_ACCESS_TOKEN and SHOPIFY_SHOP_DOMAIN in your Supabase project secrets.";
+      }
+      
       toast({
         title: "Error loading products",
-        description: "Could not load products from Shopify.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

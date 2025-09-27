@@ -32,6 +32,17 @@ VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
    - `SHOPIFY_ACCESS_TOKEN`
    - `SHOPIFY_SHOP_DOMAIN`
 
+### 3. Configure Supabase Secrets
+
+In your Supabase project dashboard:
+1. Go to **Project Settings** → **Secrets**
+2. Add the following environment variables:
+   - `SHOPIFY_ACCESS_TOKEN`: Your Shopify Admin API access token
+   - `SHOPIFY_SHOP_DOMAIN`: Your shop domain (e.g., `your-shop.myshopify.com`)
+   - `SQUARE_ACCESS_TOKEN`: Your Square API access token
+   - `SQUARE_APPLICATION_ID`: Your Square application ID
+3. After adding secrets, redeploy your Edge Functions for changes to take effect
+
 ### 3. Development
 
 Install dependencies and start the development server:
