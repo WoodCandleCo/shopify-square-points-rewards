@@ -164,8 +164,8 @@ serve(async (req) => {
     const createRewardData = await createRewardResponse.json()
     console.log(`Square create reward response:`, JSON.stringify(createRewardData, null, 2))
 
-    const rewardId = createRewardData.reward?.id
-    if (!rewardId) {
+    const squareRewardId = createRewardData.reward?.id
+    if (!squareRewardId) {
       return new Response(
         JSON.stringify({ error: 'Failed to get reward ID from Square' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -173,7 +173,7 @@ serve(async (req) => {
     }
 
     // Step 2: Redeem the loyalty reward in Square
-    const redeemResponse = await fetch(`${baseUrl}/v2/loyalty/rewards/${rewardId}/redeem`, {
+    const redeemResponse = await fetch(`${baseUrl}/v2/loyalty/rewards/${squareRewardId}/redeem`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${SQUARE_ACCESS_TOKEN}`,
