@@ -1,6 +1,12 @@
 import { json } from "@remix-run/node";
 import type { ActionFunction } from "@remix-run/node";
-import { supabase } from "~/integrations/supabase/client";
+import { createClient } from '@supabase/supabase-js';
+
+// Server-side Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,7 +41,11 @@ export const action: ActionFunction = async ({ request }) => {
     }
 
     // Call Square API to find loyalty account by phone
-    const squareResponse = await fetch(`https://connect.squareup.com/v2/loyalty/accounts/search`, {
+    const squareApiUrl = process.env.SQUARE_ENVIRONMENT === 'production' 
+      ? 'https://connect.squareup.com/v2/loyalty/accounts/search'
+      : 'https://connect.squareupsandbox.com/v2/loyalty/accounts/search';
+      
+    const squareResponse = await fetch(squareApiUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,

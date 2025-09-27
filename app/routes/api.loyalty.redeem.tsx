@@ -1,6 +1,12 @@
 import { json } from "@remix-run/node";
 import type { ActionFunction } from "@remix-run/node";
-import { supabase } from "~/integrations/supabase/client";
+import { createClient } from '@supabase/supabase-js';
+
+// Server-side Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -62,7 +68,11 @@ export const action: ActionFunction = async ({ request }) => {
     }
 
     // Get Square reward definition for proper discount creation
-    const squareRewardResponse = await fetch(`https://connect.squareup.com/v2/loyalty/programs`, {
+    const squareApiUrl = process.env.SQUARE_ENVIRONMENT === 'production' 
+      ? 'https://connect.squareup.com/v2/loyalty/programs'
+      : 'https://connect.squareupsandbox.com/v2/loyalty/programs';
+      
+    const squareRewardResponse = await fetch(squareApiUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
@@ -80,7 +90,11 @@ export const action: ActionFunction = async ({ request }) => {
     }
 
     // Step 1: Create a Square reward (ISSUED - lock points, do not redeem yet)
-    const squareResponse = await fetch(`https://connect.squareup.com/v2/loyalty/rewards`, {
+    const squareRewardsUrl = process.env.SQUARE_ENVIRONMENT === 'production' 
+      ? 'https://connect.squareup.com/v2/loyalty/rewards'
+      : 'https://connect.squareupsandbox.com/v2/loyalty/rewards';
+      
+    const squareResponse = await fetch(squareRewardsUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,

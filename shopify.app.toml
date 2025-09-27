@@ -1,9 +1,9 @@
 # This file stores configuration for CLI commands.
 # Docs: https://shopify.dev/docs/apps/build/cli-for-apps
 
-name = "CartLoyaltyV2"
-client_id = "3f0dd096efc9e0f23fddaf7a122510af"
-application_url = "https://shopify-square-points-rewards.lovable.app"
+name = "Square Loyalty Integration"
+client_id = ""
+application_url = ""
 embedded = true
 
 [access_scopes]
@@ -11,8 +11,8 @@ scopes = "write_products,read_customers,write_customers,read_orders,write_orders
 
 [auth]
 redirect_urls = [
-  "https://shopify-square-points-rewards.lovable.app/auth/shopify/callback",
-  "https://shopify-square-points-rewards.lovable.app/auth/tokens"
+  "/auth/shopify/callback",
+  "/auth/tokens"
 ]
 
 [webhooks]
@@ -23,4 +23,4 @@ embedded = false
 
 [build]
 automatically_update_urls_on_dev = true
-dev_store_url = "shop.woodcandleco.com"
+dev_store_url = ""

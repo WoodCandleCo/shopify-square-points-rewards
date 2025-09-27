@@ -8,7 +8,7 @@
   'use strict';
   
   const CONFIG = {
-    domain: '{{ block.settings.domain }}' || 'https://d2b10059-cd1b-49b3-b52e-e46e3944e1ab.lovableproject.com'
+    domain: '{{ block.settings.domain }}' || window.location.origin
   };
 
   const containerSelectors = [
@@ -479,9 +479,9 @@
     {
       "type": "text",
       "id": "domain",
-      "label": "Lovable Project Domain",
-      "default": "https://d2b10059-cd1b-49b3-b52e-e46e3944e1ab.lovableproject.com",
-      "info": "Your Lovable app domain"
+      "label": "App Domain",
+      "default": "",
+      "info": "Your deployed app domain (leave empty to use current domain)"
     }
   ]
 }

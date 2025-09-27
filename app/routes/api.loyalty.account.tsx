@@ -1,6 +1,12 @@
 import { json } from "@remix-run/node";
 import type { ActionFunction } from "@remix-run/node";
-import { supabase } from "~/integrations/supabase/client";
+import { createClient } from '@supabase/supabase-js';
+
+// Server-side Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

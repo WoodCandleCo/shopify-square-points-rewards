@@ -1,73 +1,89 @@
-# Welcome to your Lovable project
+# Square Loyalty Integration for Shopify
 
-## Project info
+A comprehensive loyalty program integration that connects Square's loyalty system with Shopify stores.
 
-**URL**: https://lovable.dev/projects/d2b10059-cd1b-49b3-b52e-e46e3944e1ab
+## Features
 
-## How can I edit this code?
+- **Square API Integration**: Connect to existing Square loyalty programs
+- **Shopify Compatibility**: Works with all Shopify plans (including Basic)
+- **Real-time Rewards**: Customers can redeem points during checkout
+- **Phone Lookup**: Find loyalty accounts by phone number
+- **Admin Dashboard**: Manage rewards, settings, and product mappings
+- **Auto-tagging**: Automatically tag products for loyalty eligibility
 
-There are several ways of editing your application.
+## Setup Instructions
 
-**Use Lovable**
+### 1. Environment Variables
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/d2b10059-cd1b-49b3-b52e-e46e3944e1ab) and start prompting.
+Create a `.env` file with the following variables:
 
-Changes made via Lovable will be committed automatically to this repo.
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-**Use your preferred IDE**
+### 2. Supabase Setup
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+1. Create a new Supabase project
+2. Run the migrations in the `supabase/migrations` folder
+3. Set up the following secrets in Supabase:
+   - `SQUARE_ACCESS_TOKEN`
+   - `SQUARE_APPLICATION_ID`
+   - `SHOPIFY_ACCESS_TOKEN`
+   - `SHOPIFY_SHOP_DOMAIN`
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 3. Development
 
-Follow these steps:
+Install dependencies and start the development server:
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
+npm install
 npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### 4. Shopify Integration
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Add the loyalty widget script to your Shopify theme:
 
-**Use GitHub Codespaces**
+```html
+<script src="https://your-domain.com/loyalty-widget-production.js" defer></script>
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Architecture
 
-## What technologies are used for this project?
+### Tech Stack
 
-This project is built with:
+- **Frontend**: React + TypeScript + Vite
+- **UI Components**: shadcn/ui + Tailwind CSS
+- **Backend**: Supabase (Database + Edge Functions)
+- **Authentication**: Supabase Auth
+- **APIs**: Square API, Shopify Admin API
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Database Schema
 
-## How can I deploy this project?
+- `profiles`: User profiles with Square/Shopify customer links
+- `loyalty_accounts`: Square loyalty account data
+- `loyalty_rewards`: Available rewards from Square
+- `loyalty_transactions`: Point earning/redemption history
+- `app_settings`: Application configuration
+- `product_mappings`: Square-to-Shopify product mappings
 
-Simply open [Lovable](https://lovable.dev/projects/d2b10059-cd1b-49b3-b52e-e46e3944e1ab) and click on Share -> Publish.
+## Deployment
 
-## Can I connect a custom domain to my Lovable project?
+1. Build the project: `npm run build`
+2. Deploy to your preferred hosting platform
+3. Set up environment variables on the hosting platform
+4. Configure Supabase edge functions
 
-Yes, you can!
+## Admin Features
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- **Settings**: Configure Square API and widget behavior
+- **Rewards Management**: Sync and manage Square loyalty rewards
+- **Product Tagging**: Auto-tag products for loyalty eligibility
+- **Promotions**: Manage Square loyalty promotions
+- **Preview**: Test the loyalty widget appearance
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## License
+
+MIT License - see LICENSE file for details.

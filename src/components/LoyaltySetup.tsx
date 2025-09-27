@@ -8,10 +8,10 @@ import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 const LoyaltySetup = () => {
-  const [domain, setDomain] = useState('shopify-square-points-rewards.lovable.app');
+  const [domain, setDomain] = useState(window.location.hostname);
   const { toast } = useToast();
 
-  const version = 'v=2025-09-26-03';
+  const version = `v=${Date.now()}`;
   const scriptCode = `<!-- Loyalty Widget Script (cache-busted) -->\n<script src="https://${domain}/loyalty-widget-production.js?${version}" defer></script>`;
 
   const copyToClipboard = (text: string) => {
@@ -50,7 +50,7 @@ const LoyaltySetup = () => {
               id="domain"
               value={domain}
               onChange={(e) => setDomain(e.target.value)}
-              placeholder="your-app.lovable.app"
+              placeholder="your-app.bolt.new"
             />
           </div>
         </CardContent>

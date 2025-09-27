@@ -7,7 +7,7 @@ const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Load the production loyalty widget with cache-busting
+    // Load the loyalty widget with cache-busting
     const script = document.createElement('script');
     const version = String(Math.floor(Date.now() / 1000));
     script.src = `/loyalty-widget-production.js?v=${version}`;
@@ -43,27 +43,27 @@ const Index = () => {
             <div className="text-center space-y-2">
               <Square className="w-8 h-8 mx-auto text-primary" />
               <h3 className="font-semibold">Square Integration</h3>
-              <p className="text-sm text-muted-foreground">Connect your existing Square loyalty program</p>
+              <p className="text-sm text-muted-foreground">Seamlessly integrate with Square loyalty</p>
             </div>
             <div className="text-center space-y-2">
               <Gift className="w-8 h-8 mx-auto text-primary" />
               <h3 className="font-semibold">Checkout Rewards</h3>
-              <p className="text-sm text-muted-foreground">Customers redeem points during Shopify checkout</p>
+              <p className="text-sm text-muted-foreground">Real-time point redemption at checkout</p>
             </div>
             <div className="text-center space-y-2">
               <Users className="w-8 h-8 mx-auto text-primary" />
               <h3 className="font-semibold">Customer Lookup</h3>
-              <p className="text-sm text-muted-foreground">Find accounts by phone number or login</p>
+              <p className="text-sm text-muted-foreground">Quick account lookup by phone or email</p>
             </div>
           </div>
           
           <div className="mt-12 p-6 bg-card rounded-lg border max-w-2xl mx-auto">
             <h3 className="text-lg font-semibold mb-2">How it works:</h3>
             <ol className="text-left text-sm text-muted-foreground space-y-1">
-              <li>1. Configure your Square API credentials in the admin dashboard</li>
-              <li>2. Deploy the checkout extension to your Shopify store</li>
+              <li>1. Configure Square API credentials in admin dashboard</li>
+              <li>2. Deploy the widget to your Shopify store</li>
               <li>3. Customers can access loyalty points during checkout</li>
-              <li>4. Points are redeemed automatically with discounts applied</li>
+              <li>4. Automatic discount application and point deduction</li>
             </ol>
           </div>
 

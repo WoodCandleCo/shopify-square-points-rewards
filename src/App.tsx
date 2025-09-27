@@ -20,7 +20,7 @@ const App = () => {
   }>({});
 
   useEffect(() => {
-    // Parse Shopify parameters from URL
+    // Parse Shopify app parameters from URL
     const urlParams = new URLSearchParams(window.location.search);
     const shop = urlParams.get('shop');
     const embedded = urlParams.get('embedded') === '1';
@@ -54,9 +54,9 @@ const App = () => {
   // If this is a Shopify embedded app, add Shopify App Bridge styles
   useEffect(() => {
     if (shopifyParams.embedded && shopifyParams.shop) {
-      document.body.className += ' shopify-embedded';
+      document.body.classList.add('shopify-embedded');
       
-      // Add Shopify App Bridge CSS
+      // Add embedded app styles
       const style = document.createElement('style');
       style.textContent = `
         .shopify-embedded {
@@ -101,7 +101,6 @@ const App = () => {
                   } 
                 />
                 <Route path="/auth" element={<Auth />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
