@@ -216,7 +216,7 @@
       try {
         showLoading();
         
-        const response = await fetch('\${CONFIG.domain}/api/loyalty/account', {
+        const response = await fetch('\${CONFIG.domain}/functions/v1/loyalty-account', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ customerId: window.Shopify?.customer?.id })
@@ -248,7 +248,7 @@
       try {
         showLoading();
         
-        const response = await fetch('\${CONFIG.domain}/api/loyalty/lookup', {
+        const response = await fetch('\${CONFIG.domain}/functions/v1/loyalty-lookup', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone })
@@ -271,7 +271,7 @@
     
     async function redeemReward(rewardId, accountId) {
       try {
-        const response = await fetch(`${CONFIG.domain}/api/loyalty/redeem`, {
+        const response = await fetch(`${CONFIG.domain}/functions/v1/loyalty-redeem`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ loyalty_account_id: accountId, reward_id: rewardId })

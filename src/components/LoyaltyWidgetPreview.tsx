@@ -69,21 +69,15 @@ const LoyaltyWidgetPreview = () => {
     setIsLoading(true);
     
     try {
-      // Use actual loyalty lookup function
-      const response = await fetch(`${window.location.origin}/api/loyalty/lookup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('loyalty-lookup', {
+        body: {
           phone: phoneNumber,
           customer_id: 'demo_customer_123',
           email: 'demo@example.com'
-        })
+        }
       });
 
-      if (response.ok) {
-        const data = await response.json();
+      if (!error && data?.success) {
         if (data.loyalty_account) {
           setLoyaltyAccount({
             id: data.loyalty_account.id,
@@ -131,10 +125,37 @@ const LoyaltyWidgetPreview = () => {
   const redeemReward = (reward: any) => {
     if (!loyaltyAccount || loyaltyAccount.balance < reward.points_required) return;
     
-    setLoyaltyAccount({
-      ...loyaltyAccount,
-      balance: loyaltyAccount.balance - reward.points_required
+    // Use actual redemption function for realistic preview
+    supabase.functions.invoke('loyalty-redeem', {
+      body: {
+        loyalty_account_id: loyaltyAccount.id,
+        reward_id: reward.id
+      }
+    }).then(({ data, error }) => {
+      if (!error && data?.success) {
+        setLoyaltyAccount({
+          ...loyaltyAccount,
+          balance: loyaltyAccount.balance - reward.points_required
+        });
+        
+        toast({
+          title: "Reward Redeemed!",
+          description: `${reward.name} has been applied to your cart.`
+        });
+      } else {
+        // Fallback to mock behavior
+        setLoyaltyAccount({
+          ...loyaltyAccount,
+          balance: loyaltyAccount.balance - reward.points_required
+        });
+        
+        toast({
+          title: "Reward Redeemed! (Demo)",
+          description: `${reward.name} has been applied to your cart.`
+        });
+      }
     });
+  };
 
     toast({
       title: "Reward Redeemed!",

@@ -15,33 +15,24 @@ A comprehensive loyalty program integration that connects Square's loyalty syste
 
 ### 1. Environment Variables
 
-Create a `.env` file with the following variables:
+Set up your environment variables in Supabase:
 
-```env
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
+1. **Frontend Environment Variables** (in your deployment platform):
+   - `VITE_SUPABASE_URL`: Your Supabase project URL
+   - `VITE_SUPABASE_ANON_KEY`: Your Supabase anonymous key
+
+2. **Backend Environment Variables** (in Supabase Secrets):
+   - `SQUARE_ACCESS_TOKEN`: Your Square API access token
+   - `SQUARE_APPLICATION_ID`: Your Square application ID
+   - `SQUARE_ENVIRONMENT`: Either 'sandbox' or 'production'
+   - `SHOPIFY_ACCESS_TOKEN`: Your Shopify Admin API access token
+   - `SHOPIFY_SHOP_DOMAIN`: Your shop domain (e.g., `your-shop.myshopify.com`)
 
 ### 2. Supabase Setup
 
 1. Create a new Supabase project
-2. Run the migrations in the `supabase/migrations` folder
-3. Set up the following secrets in Supabase:
-   - `SQUARE_ACCESS_TOKEN`
-   - `SQUARE_APPLICATION_ID`
-   - `SHOPIFY_ACCESS_TOKEN`
-   - `SHOPIFY_SHOP_DOMAIN`
-
-### 3. Configure Supabase Secrets
-
-In your Supabase project dashboard:
-1. Go to **Project Settings** → **Secrets**
-2. Add the following environment variables:
-   - `SHOPIFY_ACCESS_TOKEN`: Your Shopify Admin API access token
-   - `SHOPIFY_SHOP_DOMAIN`: Your shop domain (e.g., `your-shop.myshopify.com`)
-   - `SQUARE_ACCESS_TOKEN`: Your Square API access token
-   - `SQUARE_APPLICATION_ID`: Your Square application ID
-3. After adding secrets, redeploy your Edge Functions for changes to take effect
+2. Run the database migrations
+3. Configure the environment variables as described above
 
 ### 3. Development
 

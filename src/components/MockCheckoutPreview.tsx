@@ -90,16 +90,12 @@ const MockCheckoutPreview = () => {
     
     setIsLoading(true);
     try {
-      // Use Supabase lookup function directly
-      const { data, error } = await supabase.functions.invoke('sync-square-rewards');
-      
-      if (error) throw error;
-
       // For demo purposes, simulate finding an account
       const mockAccount = {
         id: 'demo_account_' + Date.now(),
         balance: 1250,
-        points_earned_lifetime: 3500
+        points_earned_lifetime: 3500,
+        lifetime_points: 3500
       };
       
       setLoyaltyAccount(mockAccount);
