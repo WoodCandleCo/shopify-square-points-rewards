@@ -155,7 +155,6 @@ const LoyaltyWidgetPreview = () => {
         });
       }
     });
-  };
 
     toast({
       title: "Reward Redeemed!",
