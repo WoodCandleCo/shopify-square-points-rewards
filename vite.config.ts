@@ -13,17 +13,19 @@ export default defineConfig(() => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  define: {
-    'process.env': {}
-  },
   build: {
     outDir: 'dist',
     sourcemap: false,
     minify: 'esbuild',
+    target: 'es2015',
     rollupOptions: {
       onwarn(warning, warn) {
+        // Suppress common warnings that don't affect functionality
         if (warning.code === 'UNUSED_EXTERNAL_IMPORT' || 
-            warning.code === 'MODULE_LEVEL_DIRECTIVE') return;
+            warning.code === 'MODULE_LEVEL_DIRECTIVE' ||
+            warning.code === 'EVAL') {
+          return;
+        }
         warn(warning);
       }
     }
