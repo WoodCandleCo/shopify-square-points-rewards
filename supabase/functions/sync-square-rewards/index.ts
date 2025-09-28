@@ -107,23 +107,71 @@ serve(async (req) => {
     // Sync rewards to database
     let syncedCount = 0
     for (const reward of rewards) {
-      const { error } = await supabaseClient
-        .from('loyalty_rewards')
-        .upsert({
-          square_reward_id: reward.id,
-          name: reward.reward_tier?.name || 'Unnamed Reward',
-          description: reward.reward_tier?.definition?.discount?.percentage_discount?.percentage || null,
-          points_required: reward.reward_tier?.points || 0,
-          discount_amount: reward.reward_tier?.definition?.discount?.fixed_discount?.amount || 
-                          reward.reward_tier?.definition?.discount?.percentage_discount?.percentage || null,
-          discount_type: reward.reward_tier?.definition?.discount?.fixed_discount ? 'FIXED_AMOUNT' : 'PERCENTAGE',
-          is_active: true
-        }, {
-          onConflict: 'square_reward_id'
-        })
+      try {
+        // Extract reward tier information
+        const rewardTier = reward.reward_tier
+        if (!rewardTier) continue
 
-      if (!error) {
-        syncedCount++
+        const rewardName = rewardTier.name || 'Unnamed Reward'
+        const pointsRequired = parseInt(rewardTier.points) || 0
+        
+        // Parse discount information based on type
+        let discountAmount = null
+        let discountType = null
+        let maxDiscountAmount = null
+        let description = null
+
+        const discount = rewardTier.definition?.discount
+        if (discount) {
+          if (discount.fixed_discount) {
+            // Fixed amount discount (amount is in cents)
+            discountType = 'FIXED_AMOUNT'
+            discountAmount = parseInt(discount.fixed_discount.amount) || 0
+            description = `$${(discountAmount / 100).toFixed(2)} off`
+          } else if (discount.percentage_discount) {
+            // Percentage discount
+            discountType = 'PERCENTAGE'
+            // Parse percentage string to integer (e.g., "10.0" -> 10)
+            const percentageStr = discount.percentage_discount.percentage || '0'
+            discountAmount = parseInt(parseFloat(percentageStr).toString()) || 0
+            description = `${discountAmount}% off`
+            
+            // Check for maximum discount amount
+            if (discount.percentage_discount.maximum_discount_money) {
+              maxDiscountAmount = parseInt(discount.percentage_discount.maximum_discount_money.amount) || null
+              if (maxDiscountAmount) {
+                description += ` (max $${(maxDiscountAmount / 100).toFixed(2)})`
+              }
+            }
+          }
+        }
+
+        // Prepare the reward data for database insertion
+        const rewardData = {
+          square_reward_id: reward.id,
+          name: rewardName,
+          description: description,
+          points_required: pointsRequired,
+          discount_amount: discountAmount,
+          discount_type: discountType,
+          max_discount_amount: maxDiscountAmount,
+          is_active: true
+        }
+
+        // Insert/update the reward in the database
+        const { error } = await supabaseClient
+          .from('loyalty_rewards')
+          .upsert(rewardData, {
+            onConflict: 'square_reward_id'
+          })
+
+        if (error) {
+          console.error(`Error syncing reward ${reward.id}:`, error)
+        } else {
+          syncedCount++
+        }
+      } catch (rewardError) {
+        console.error(`Error processing reward ${reward.id}:`, rewardError)
       }
     }
     
@@ -131,6 +179,7 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         count: syncedCount,
+        total_rewards: rewards.length,
         environment: squareEnvironment
       }),
       {
