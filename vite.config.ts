@@ -13,11 +13,6 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-  define: {
-    // Ensure environment variables are properly defined
-    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL),
-    'import.meta.env.VITE_SUPABASE_API_KEY': JSON.stringify(process.env.VITE_SUPABASE_API_KEY),
-  },
   build: {
     rollupOptions: {
       onwarn(warning, warn) {
