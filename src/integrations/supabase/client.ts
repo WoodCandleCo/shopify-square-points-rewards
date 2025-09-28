@@ -5,7 +5,11 @@ import type { Database } from './types';
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_API_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Use fallback values for build process
+if (!SUPABASE_URL || !SUPABASE_API_KEY) {
+  console.warn('Missing Supabase environment variables');
+}
+
+// Use actual values or safe fallbacks
 const supabaseUrl = SUPABASE_URL || 'https://placeholder.supabase.co';
 const supabaseKey = SUPABASE_API_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBsYWNlaG9sZGVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NDUxMjM0NTYsImV4cCI6MTk2MDY5OTQ1Nn0.placeholder';
 

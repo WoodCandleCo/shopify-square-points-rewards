@@ -10,7 +10,14 @@ import Admin from "@/pages/Admin";
 import Auth from "@/pages/Auth";
 import NotFound from "@/pages/NotFound";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => {
   const [shopifyParams, setShopifyParams] = useState<{
@@ -20,34 +27,38 @@ const App = () => {
   }>({});
 
   useEffect(() => {
-    // Parse Shopify app parameters from URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const shop = urlParams.get('shop');
-    const embedded = urlParams.get('embedded') === '1';
-    const accessToken = urlParams.get('access_token');
+    try {
+      // Parse Shopify app parameters from URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const shop = urlParams.get('shop');
+      const embedded = urlParams.get('embedded') === '1';
+      const accessToken = urlParams.get('access_token');
 
-    if (shop || embedded) {
-      setShopifyParams({ shop: shop || undefined, embedded, accessToken: accessToken || undefined });
-      
-      // Store shop info for the session
-      if (shop) {
-        sessionStorage.setItem('shopify_shop', shop);
+      if (shop || embedded) {
+        setShopifyParams({ shop: shop || undefined, embedded, accessToken: accessToken || undefined });
+        
+        // Store shop info for the session
+        if (shop) {
+          sessionStorage.setItem('shopify_shop', shop);
+        }
+        if (accessToken) {
+          sessionStorage.setItem('shopify_access_token', accessToken);
+        }
       }
-      if (accessToken) {
-        sessionStorage.setItem('shopify_access_token', accessToken);
-      }
-    }
 
-    // Check for stored shop info
-    const storedShop = sessionStorage.getItem('shopify_shop');
-    const storedToken = sessionStorage.getItem('shopify_access_token');
-    if (storedShop || storedToken) {
-      setShopifyParams(prev => ({
-        ...prev,
-        shop: prev.shop || storedShop || undefined,
-        accessToken: prev.accessToken || storedToken || undefined,
-        embedded: prev.embedded || true
-      }));
+      // Check for stored shop info
+      const storedShop = sessionStorage.getItem('shopify_shop');
+      const storedToken = sessionStorage.getItem('shopify_access_token');
+      if (storedShop || storedToken) {
+        setShopifyParams(prev => ({
+          ...prev,
+          shop: prev.shop || storedShop || undefined,
+          accessToken: prev.accessToken || storedToken || undefined,
+          embedded: prev.embedded || true
+        }));
+      }
+    } catch (error) {
+      console.warn('Error parsing URL parameters:', error);
     }
   }, []);
 
