@@ -17,7 +17,7 @@ import LoyaltyPromotionsManager from "@/components/LoyaltyPromotionsManager";
 import ProductList from "@/components/ProductList";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 

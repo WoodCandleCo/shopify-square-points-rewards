@@ -7,12 +7,13 @@
     "dev": "vite",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "clean": "rimraf dist node_modules/.vite .vite",
+    "clean": "node scripts/cleanup.js",
     "prebuild": "npm run clean",
     "lint": "eslint .",
     "preview": "vite preview",
     "type-check": "tsc --noEmit",
-    "check-duplicates": "node scripts/check-duplicates.js"
+    "check-duplicates": "node scripts/check-duplicates.js",
+    "build-check": "npm run type-check && npm run build"
   },
   "dependencies": {
     "@radix-ui/react-collapsible": "^1.1.11",
